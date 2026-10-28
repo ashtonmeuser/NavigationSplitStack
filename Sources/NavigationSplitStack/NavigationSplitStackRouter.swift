@@ -10,7 +10,7 @@ import SwiftUI
 // TODO: Documentation
 @MainActor @Observable public final class NavigationSplitStackRouter<Sidebar: Hashable, Detail: Hashable> {
     internal var horizontalSizeClass: UserInterfaceSizeClass?
-    internal var columnVisibility = NavigationSplitViewVisibility.automatic
+    internal var columnVisibility = NavigationSplitViewVisibility.doubleColumn
     public var preferredCompactColumn = NavigationSplitViewColumn.sidebar {
         didSet {
             guard horizontalSizeClass == .compact, oldValue == .detail, preferredCompactColumn == .sidebar else {
@@ -49,7 +49,9 @@ import SwiftUI
             // Only opening or clearing the detail stack changes column presentation.
             guard oldValue.isEmpty != detail.isEmpty else { return }
 
-            columnVisibility = detail.isEmpty ? .doubleColumn : .automatic
+            if detail.isEmpty {
+                columnVisibility = .doubleColumn
+            }
             let column: NavigationSplitViewColumn = detail.isEmpty ? .sidebar : .detail
             if preferredCompactColumn != column {
                 preferredCompactColumn = column

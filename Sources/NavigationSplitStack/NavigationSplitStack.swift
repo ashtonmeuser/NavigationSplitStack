@@ -22,7 +22,7 @@ public struct NavigationSplitStack<Sidebar: Hashable, Detail: Hashable, SidebarV
     }
 
     public var body: some View {
-        NavigationSplitView(preferredCompactColumn: $router.preferredCompactColumn) {
+        NavigationSplitView(columnVisibility: $router.columnVisibility, preferredCompactColumn: $router.preferredCompactColumn) {
             NavigationStack(path: $router.sidebar) {
                 sidebarView(nil)
                     .navigationDestination(for: Sidebar.self) {
