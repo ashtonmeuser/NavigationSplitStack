@@ -14,7 +14,7 @@ enum SidebarDestination: Hashable {
 }
 
 enum DetailDestination: Hashable {
-    case sepcies(Species.ID)
+    case species(Species.ID)
 }
 
 typealias Router = NavigationSplitStackRouter<SidebarDestination, DetailDestination>
@@ -31,7 +31,7 @@ struct ContentView: View {
             }
         } detail: { detailDestination in
             switch detailDestination {
-            case .sepcies(let id): SpeciesView(speciesID: id)
+            case .species(let id): SpeciesView(speciesID: id)
             }
         }
     }

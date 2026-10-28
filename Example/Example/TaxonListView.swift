@@ -64,7 +64,7 @@ struct TaxonListView: View {
     var body: some View {
         List(model.childTaxa) { taxonWithChildCount in
             let taxon = taxonWithChildCount.taxon
-            let destination = taxon.parentID == nil ? SidebarDestination.class(taxon.id) : SidebarDestination.family(taxon.id)
+            let destination: SidebarDestination = taxon.parentID == nil ? .class(taxon.id) : .family(taxon.id)
 
             NavigationLink(value: destination) {
                 HStack {

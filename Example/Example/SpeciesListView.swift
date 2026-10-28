@@ -50,7 +50,7 @@ struct SpeciesListView: View {
             } else {
                 List(model.species) { species in
                     Button {
-                        router.detail = [DetailDestination.sepcies(species.id)]
+                        router.detail = [.species(species.id)]
                     } label: {
                         HStack {
                             VStack(alignment: .leading) {
