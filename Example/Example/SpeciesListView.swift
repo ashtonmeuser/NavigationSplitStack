@@ -41,30 +41,39 @@ struct SpeciesListView: View {
     }
 
     var body: some View {
-        List(model.species) { species in
-            Button {
-                router.detail = [DetailDestination.sepcies(species.id)]
-            } label: {
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text(species.name)
-                            .font(.headline)
-
-                        if let scientificName = species.scientificName {
-                            Text(scientificName)
-                                .font(.subheadline)
-                                .italic()
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    if let icon = species.icon {
-                        Spacer()
-                        Text(icon)
-                    }
+        Group {
+            if model.species.isEmpty {
+                ContentUnavailableView {
+                    Text("No species")
+                        .foregroundStyle(.secondary)
                 }
+            } else {
+                List(model.species) { species in
+                    Button {
+                        router.detail = [DetailDestination.sepcies(species.id)]
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(species.name)
+                                    .font(.headline)
 
+                                if let scientificName = species.scientificName {
+                                    Text(scientificName)
+                                        .font(.subheadline)
+                                        .italic()
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            if let icon = species.icon {
+                                Spacer()
+                                Text(icon)
+                            }
+                        }
+
+                    }
+                    .tint(.primary)
+                }
             }
-            .tint(.primary)
         }
         .navigationTitle(model.familyName)
     }

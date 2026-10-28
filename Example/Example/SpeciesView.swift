@@ -36,6 +36,7 @@ struct SpeciesView: View {
                 }
                 Text(species.name)
             }
+            .navigationTitle(species.name)
         }
     }
 }
