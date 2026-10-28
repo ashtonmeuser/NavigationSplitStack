@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		C036ABF5308C1EDE00683801 /* NavigationSplitStack in Frameworks */ = {isa = PBXBuildFile; productRef = C036ABF4308C1EDE00683801 /* NavigationSplitStack */; };
+		C036ABF8308C353D00683801 /* NavigationSplitStack in Frameworks */ = {isa = PBXBuildFile; productRef = C036ABF7308C353D00683801 /* NavigationSplitStack */; };
+		C036AC01308E6CDC00683801 /* SQLiteData in Frameworks */ = {isa = PBXBuildFile; productRef = C036AC00308E6CDC00683801 /* SQLiteData */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,6 +57,8 @@
 		C036ABBE308C1D4800683801 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				C036AC01308E6CDC00683801 /* SQLiteData in Frameworks */,
+				C036ABF8308C353D00683801 /* NavigationSplitStack in Frameworks */,
 				C036ABF5308C1EDE00683801 /* NavigationSplitStack in Frameworks */,
 			);
 		};
@@ -118,6 +122,8 @@
 			name = Example;
 			packageProductDependencies = (
 				C036ABF4308C1EDE00683801 /* NavigationSplitStack */,
+				C036ABF7308C353D00683801 /* NavigationSplitStack */,
+				C036AC00308E6CDC00683801 /* SQLiteData */,
 			);
 			productName = Example;
 			productReference = C036ABC1308C1D4800683801 /* Example.app */;
@@ -197,6 +203,10 @@
 			);
 			mainGroup = C036ABB8308C1D4800683801;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C036ABF6308C353D00683801 /* XCLocalSwiftPackageReference "../../NavigationSplitStack" */,
+				C036ABFF308E6CDC00683801 /* XCRemoteSwiftPackageReference "sqlite-data" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C036ABC2308C1D4800683801 /* Products */;
 			projectDirPath = "";
@@ -602,10 +612,39 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		C036ABF6308C353D00683801 /* XCLocalSwiftPackageReference "../../NavigationSplitStack" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../NavigationSplitStack;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C036ABFF308E6CDC00683801 /* XCRemoteSwiftPackageReference "sqlite-data" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/sqlite-data";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.12.1;
+			};
+			traits = (
+			);
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		C036ABF4308C1EDE00683801 /* NavigationSplitStack */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = NavigationSplitStack;
+		};
+		C036ABF7308C353D00683801 /* NavigationSplitStack */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NavigationSplitStack;
+		};
+		C036AC00308E6CDC00683801 /* SQLiteData */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C036ABFF308E6CDC00683801 /* XCRemoteSwiftPackageReference "sqlite-data" */;
+			productName = SQLiteData;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
