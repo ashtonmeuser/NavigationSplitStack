@@ -26,11 +26,13 @@ struct ContentView: View {
         NavigationSplitStack(router: router) { sidebarDestination in
             switch sidebarDestination {
             case .none: TaxonListView()
-            case .class(let id): TaxonListView(id)
+            case .class(let id): TaxonListView(parentID: id)
             case .family(let id): SpeciesListView(taxonID: id)
             }
-        } detail: { _ in
-            Text("hello")
+        } detail: { detailDestination in
+            switch detailDestination {
+            case .sepcies(let id): SpeciesView(speciesID: id)
+            }
         }
     }
 }

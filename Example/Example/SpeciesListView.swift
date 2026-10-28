@@ -7,12 +7,16 @@
 
 import SwiftUI
 import SQLiteData
+import NavigationSplitStack
 
 @MainActor
 @Observable
 final class SpeciesListModel {
     @ObservationIgnored
     @FetchAll var species: [Species]
+
+    @ObservationIgnored
+    @FetchOne var familyName: String
 
     init(taxonID: Taxon.ID) {
         _species = FetchAll(
@@ -21,10 +25,15 @@ final class SpeciesListModel {
                 .order(by: \.name),
             animation: .default
         )
+        _familyName = FetchOne(
+            wrappedValue: "Family",
+            Taxon.where { $0.id.is(taxonID) }.select(\.name)
+        )
     }
 }
 
 struct SpeciesListView: View {
+    @Environment(Router.self) private var router
     @State private var model: SpeciesListModel
 
     init(taxonID: Taxon.ID) {
@@ -33,23 +42,31 @@ struct SpeciesListView: View {
 
     var body: some View {
         List(model.species) { species in
-            Button(species.name) {
-                
+            Button {
+                router.detail = [DetailDestination.sepcies(species.id)]
+            } label: {
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text(species.name)
+                            .font(.headline)
+
+                        if let scientificName = species.scientificName {
+                            Text(scientificName)
+                                .font(.subheadline)
+                                .italic()
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    if let icon = species.icon {
+                        Spacer()
+                        Text(icon)
+                    }
+                }
+
             }
-//            NavigationLink(value: destination) {
-//                VStack(alignment: .leading) {
-//                    Text(taxon.name)
-//                        .font(.headline)
-//
-//                    if let scientificName = taxon.scientificName {
-//                        Text(scientificName)
-//                            .font(.subheadline)
-//                            .italic()
-//                            .foregroundStyle(.secondary)
-//                    }
-//                }
-//            }
+            .tint(.primary)
         }
+        .navigationTitle(model.familyName)
     }
 }
 
