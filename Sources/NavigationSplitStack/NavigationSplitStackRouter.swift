@@ -17,8 +17,9 @@ import SwiftUI
                 return
             }
             // Returning to the sidebar clears all detail selection in compact context
-            detailRoot = nil
-            detailRest = []
+            if !detail.isEmpty {
+                detail.removeAll()
+            }
         }
     }
     public var sidebar: [Sidebar] = [] {
@@ -31,25 +32,27 @@ import SwiftUI
             }
         }
     }
-    internal var detailRoot: Detail?
-    internal var detailRest: [Detail] = []
-    public var detail: [Detail] {
+    // The nested stack's path excludes the first element, which supplies its root view.
+    internal var detailRest: [Detail] {
         get {
-            if let detailRoot {
-                return [detailRoot] + detailRest
-            }
-            return []
+            Array(detail.dropFirst())
         }
         set {
-            detailRoot = newValue.first
-            detailRest = Array(newValue.dropFirst())
-            if detailRoot != nil {
-                print("col vis: \(columnVisibility) preferred: \(preferredCompactColumn)")
-                columnVisibility = .detailOnly
-                preferredCompactColumn = .detail
-            } else {
-                columnVisibility = .doubleColumn
-                preferredCompactColumn = .sidebar
+            // Ignore writes from a departing stack after its root has been cleared.
+            guard !detail.isEmpty else { return }
+            let endIndex = detail.endIndex
+            detail.replaceSubrange(1..<endIndex, with: newValue)
+        }
+    }
+    public var detail: [Detail] = [] {
+        didSet {
+            // Only opening or clearing the detail stack changes column presentation.
+            guard oldValue.isEmpty != detail.isEmpty else { return }
+
+            columnVisibility = detail.isEmpty ? .doubleColumn : .automatic
+            let column: NavigationSplitViewColumn = detail.isEmpty ? .sidebar : .detail
+            if preferredCompactColumn != column {
+                preferredCompactColumn = column
             }
         }
     }
