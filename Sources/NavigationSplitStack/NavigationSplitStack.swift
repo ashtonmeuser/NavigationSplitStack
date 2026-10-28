@@ -29,11 +29,6 @@ public struct NavigationSplitStack<Sidebar: Hashable, Detail: Hashable, SidebarV
                         sidebarView($0)
                     }
             }
-//            .background {
-//                // Hacky way to ensure detail view is presented when selection changes in the case where sidebar does not contain an appropriate List
-//                // Note that using preferredCompactColumn to drive when the detail pane is displayed or not is buggy (see https://theempathicdev.de/blog/advanced-navigation-split-view-bugs)
-//                List(selection: $router.detailRoot) { }.hidden().frame(width: 0, height: 0)
-//            }
 #if os(macOS)
             .navigationSplitViewColumnWidth(min: 260, ideal: 260)
             .navigationBarBackButtonHidden()
