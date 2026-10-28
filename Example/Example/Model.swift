@@ -93,15 +93,16 @@ import SQLiteData
 
 @Table("taxa")
 struct Taxa: Identifiable {
-    let id: UUID
+    let id: Int64
     let parentID: Taxa.ID?
-    var name = ""
+    var name: String
+    var scientificName: String?
 }
 
 @Table("species")
 struct Species: Identifiable {
-    let id: UUID
+    let id: Int64
     let taxonID: Taxa.ID
-    var name = ""
-    var icon = ""
+    var name: String
+    var icon: String?
 }

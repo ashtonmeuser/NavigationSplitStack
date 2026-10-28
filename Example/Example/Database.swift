@@ -5,6 +5,7 @@
 //  Created by Ashton Meuser on 2026-10-28.
 //
 
+import Foundation
 import SQLiteData
 
 extension DependencyValues {
@@ -12,34 +13,44 @@ extension DependencyValues {
         let database = try SQLiteData.defaultDatabase()
         var migrator = DatabaseMigrator()
 
-        #if DEBUG
+//        #if DEBUG
             migrator.eraseDatabaseOnSchemaChange = true
-        #endif
+//        #endif
 
         migrator.registerMigration("Create the 'taxa' table") { db in
             try #sql(
                 """
                 CREATE TABLE "taxa" (
-                    "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
-                    "parentID" TEXT REFERENCES "taxa"("id") ON DELETE CASCADE,
-                    "name" TEXT NOT NULL
+                    "id" INTEGER PRIMARY KEY NOT NULL,
+                    "parentID" INTEGER REFERENCES "taxa"("id") ON DELETE CASCADE,
+                    "name" TEXT NOT NULL,
+                    "scientificName" TEXT
                 ) STRICT
                 """
             )
             .execute(db)
         }
+
         migrator.registerMigration("Create the 'species' table") { db in
             try #sql(
                 """
                 CREATE TABLE "species" (
-                    "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
-                    "taxonID" TEXT REFERENCES "taxa"("id") ON DELETE CASCADE,
+                    "id" INTEGER PRIMARY KEY NOT NULL,
+                    "taxonID" INTEGER REFERENCES "taxa"("id") ON DELETE CASCADE,
                     "name" TEXT NOT NULL,
                     "icon" TEXT
                 ) STRICT
                 """
             )
             .execute(db)
+        }
+
+        migrator.registerMigration("Seed taxonomy") { db in
+            guard let url = Bundle.main.url(forResource: "taxonomy-seed", withExtension: "sql") else {
+                fatalError("Missing bundled resource: taxonomy-seed.sql")
+            }
+            let sql = try String(contentsOf: url, encoding: .utf8)
+            try db.execute(sql: sql)
         }
 
         try migrator.migrate(database)
