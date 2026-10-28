@@ -22,14 +22,11 @@ import SwiftUI
             }
         }
     }
+    /// The sidebar navigation path. Assigning it also shows the sidebar,
+    /// even when the assigned path is unchanged.
     public var sidebar: [Sidebar] = [] {
         didSet {
-            // Display the sidebar, unsetting any detail selection in compact context
-            if horizontalSizeClass == .compact {
-                detail = [] // This will in turn set columnVisibility = .doubleColumn
-            } else {
-                columnVisibility = .doubleColumn
-            }
+            showSidebar()
         }
     }
     // The nested stack's path excludes the first element, which supplies its root view.
@@ -60,4 +57,26 @@ import SwiftUI
     }
 
     public init() {}
+
+    /// Shows the sidebar without changing its navigation path.
+    /// Clears the detail path in compact layouts and preserves it in expanded layouts.
+    public func showSidebar() {
+        if horizontalSizeClass == .compact, !detail.isEmpty {
+            detail.removeAll()
+        }
+        columnVisibility = .doubleColumn
+        if preferredCompactColumn != .sidebar {
+            preferredCompactColumn = .sidebar
+        }
+    }
+
+    /// Hides the sidebar to focus on detail without changing either navigation path.
+    /// Allows empty detail in expanded layouts, but does nothing when detail is empty in compact layouts.
+    public func hideSidebar() {
+        guard horizontalSizeClass != .compact || !detail.isEmpty else { return }
+        columnVisibility = .detailOnly
+        if !detail.isEmpty, preferredCompactColumn != .detail {
+            preferredCompactColumn = .detail
+        }
+    }
 }
