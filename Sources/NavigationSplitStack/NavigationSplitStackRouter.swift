@@ -11,7 +11,7 @@ import SwiftUI
 @MainActor @Observable public final class NavigationSplitStackRouter<Sidebar: Hashable, Detail: Hashable> {
     internal var horizontalSizeClass: UserInterfaceSizeClass?
     internal var columnVisibility = NavigationSplitViewVisibility.doubleColumn
-    public var preferredCompactColumn = NavigationSplitViewColumn.sidebar {
+    internal var preferredCompactColumn = NavigationSplitViewColumn.sidebar {
         didSet {
             guard horizontalSizeClass == .compact, oldValue == .detail, preferredCompactColumn == .sidebar else {
                 return
