@@ -8,12 +8,18 @@
 import SwiftUI
 
 // TODO: Documentation
-@MainActor @Observable public final class NavigationSplitStackRouter<Sidebar: Hashable, Detail: Hashable> {
+@MainActor @Observable
+public final class NavigationSplitStackRouter<
+    Sidebar: Hashable,
+    Detail: Hashable
+> {
     internal var horizontalSizeClass: UserInterfaceSizeClass?
     internal var columnVisibility = NavigationSplitViewVisibility.doubleColumn
     internal var preferredCompactColumn = NavigationSplitViewColumn.sidebar {
         didSet {
-            guard horizontalSizeClass == .compact, oldValue == .detail, preferredCompactColumn == .sidebar else {
+            guard horizontalSizeClass == .compact, oldValue == .detail,
+                preferredCompactColumn == .sidebar
+            else {
                 return
             }
             // Returning to the sidebar clears all detail selection in compact context
@@ -49,7 +55,8 @@ import SwiftUI
             if detail.isEmpty {
                 columnVisibility = .doubleColumn
             }
-            let column: NavigationSplitViewColumn = detail.isEmpty ? .sidebar : .detail
+            let column: NavigationSplitViewColumn =
+                detail.isEmpty ? .sidebar : .detail
             if preferredCompactColumn != column {
                 preferredCompactColumn = column
             }

@@ -7,14 +7,24 @@
 
 import SwiftUI
 
-public struct NavigationSplitStack<Sidebar: Hashable, Detail: Hashable, SidebarView: View, DetailView: View>: View {
+public struct NavigationSplitStack<
+    Sidebar: Hashable,
+    Detail: Hashable,
+    SidebarView: View,
+    DetailView: View
+>: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private let sidebarView: (Sidebar?) -> SidebarView
     private let detailView: (Detail) -> DetailView
     private let emptyText: LocalizedStringKey?
     @Bindable private var router: NavigationSplitStackRouter<Sidebar, Detail>
 
-    public init(_ router: NavigationSplitStackRouter<Sidebar, Detail>, emptyText: LocalizedStringKey? = nil, @ViewBuilder sidebar: @escaping (Sidebar?) -> SidebarView, @ViewBuilder detail: @escaping (Detail) -> DetailView) {
+    public init(
+        _ router: NavigationSplitStackRouter<Sidebar, Detail>,
+        emptyText: LocalizedStringKey? = nil,
+        @ViewBuilder sidebar: @escaping (Sidebar?) -> SidebarView,
+        @ViewBuilder detail: @escaping (Detail) -> DetailView
+    ) {
         self.router = router
         sidebarView = sidebar
         detailView = detail
@@ -22,17 +32,20 @@ public struct NavigationSplitStack<Sidebar: Hashable, Detail: Hashable, SidebarV
     }
 
     public var body: some View {
-        NavigationSplitView(columnVisibility: $router.columnVisibility, preferredCompactColumn: $router.preferredCompactColumn) {
+        NavigationSplitView(
+            columnVisibility: $router.columnVisibility,
+            preferredCompactColumn: $router.preferredCompactColumn
+        ) {
             NavigationStack(path: $router.sidebar) {
                 sidebarView(nil)
                     .navigationDestination(for: Sidebar.self) {
                         sidebarView($0)
                     }
             }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 260, ideal: 260)
-            .navigationBarBackButtonHidden()
-#endif
+            #if os(macOS)
+                .navigationSplitViewColumnWidth(min: 260, ideal: 260)
+                .navigationBarBackButtonHidden()
+            #endif
         } detail: {
             Group {
                 // This conditional must be applied outside of the navigation stack
@@ -53,7 +66,7 @@ public struct NavigationSplitStack<Sidebar: Hashable, Detail: Hashable, SidebarV
                 }
             }
         }
-        .environment(router) // Insert selection object into environment
+        .environment(router)  // Insert router into environment
         .onChange(of: horizontalSizeClass, initial: true) {
             router.horizontalSizeClass = horizontalSizeClass
         }
