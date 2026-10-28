@@ -21,10 +21,6 @@ public struct NavigationSplitStack<Sidebar: Hashable, Detail: Hashable, SidebarV
         self.emptyText = emptyText
     }
 
-    public init(_ sidebarType: Sidebar.Type, _ detailType: Detail.Type, emptyText: LocalizedStringKey? = nil, @ViewBuilder sidebar: @escaping (Sidebar?) -> SidebarView, @ViewBuilder detail: @escaping (Detail) -> DetailView) {
-        self.init(NavigationSplitStackRouter<Sidebar, Detail>(), emptyText: emptyText, sidebar: sidebar, detail: detail)
-    }
-
     public var body: some View {
         NavigationSplitView(preferredCompactColumn: $router.preferredCompactColumn) {
             NavigationStack(path: $router.sidebar) {
