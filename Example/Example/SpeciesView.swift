@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SQLiteData
+import NavigationSplitStack
 
 @MainActor
 @Observable
@@ -58,6 +59,7 @@ final class SpeciesModel {
 }
 
 struct SpeciesView: View {
+    @Environment(Router.self) private var router
     @State private var model: SpeciesModel
 
     init(speciesID: Taxon.ID) {
@@ -65,20 +67,44 @@ struct SpeciesView: View {
     }
 
     var body: some View {
-        if let species = model.species {
-            ScrollView {
-                VStack {
-                    if let icon = species.icon {
-                        Text(icon)
-                    }
-                    Text(species.name)
-                    if let taxonomicClass = model.taxonomicClass, let family = model.family {
-                        Text("\(species.name) is a part of the \(family.name) family within the \(taxonomicClass.name) class.")
+        Group {
+            if let species = model.species {
+                ScrollView {
+                    VStack {
+                        if let icon = species.icon {
+                            Text(icon)
+                        }
+                        Text(species.name)
+                        if let taxonomicClass = model.taxonomicClass, let family = model.family {
+                            let markdown = """
+                            \(species.name) is a part of the [\(family.name)](taxonomy://family/\(family.id)) \
+                            family within the [\(taxonomicClass.name)](taxonomy://class/\(taxonomicClass.id)) class.
+                            """
+
+                            Text(markdown)
+                                .environment(\.openURL, OpenURLAction { url in
+                                    guard url.scheme == "taxonomy",
+                                          let id = Taxon.ID(url.lastPathComponent),
+                                          url.path == "/\(id)"
+                                    else { return .discarded }
+
+                                    switch url.host {
+                                    case "class":
+                                        router.sidebar = [.class(id)]
+                                    case "family":
+                                        router.sidebar = [.class(taxonomicClass.id), .family(id)]
+                                    default:
+                                        return .discarded
+                                    }
+
+                                    return .handled
+                                })
+                        }
                     }
                 }
             }
-            .navigationTitle(species.name)
         }
+        .navigationTitle(model.species?.name ?? "Species")
     }
 }
 
