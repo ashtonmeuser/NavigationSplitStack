@@ -12,7 +12,7 @@ public struct NavigationSplitStack<Sidebar: Hashable, Detail: Hashable, SidebarV
     private let sidebarView: (Sidebar?) -> SidebarView
     private let detailView: (Detail) -> DetailView
     private let emptyText: LocalizedStringKey?
-    @State private var router: NavigationSplitStackRouter<Sidebar, Detail>
+    @Bindable private var router: NavigationSplitStackRouter<Sidebar, Detail>
 
     public init(_ router: NavigationSplitStackRouter<Sidebar, Detail>, emptyText: LocalizedStringKey? = nil, @ViewBuilder sidebar: @escaping (Sidebar?) -> SidebarView, @ViewBuilder detail: @escaping (Detail) -> DetailView) {
         self.router = router
@@ -46,7 +46,7 @@ public struct NavigationSplitStack<Sidebar: Hashable, Detail: Hashable, SidebarV
             Group {
                 // This conditional must be applied outside of the navigation stack
                 // Otherwise, the navigation pop animation responds to the nil selection i.e. detail view is set to content unavailable during pop animation
-                if let detail = router.detail.last {
+                if let detail = router.detail.first {
                     NavigationStack(path: $router.detailRest) {
                         detailView(detail)
                             .navigationDestination(for: Detail.self) {

@@ -172,7 +172,7 @@ struct ContentView2: View {
         NavigationSplitStack(router) { level in
             VStack {
                 Text("Sidebar \(level ?? 0)")
-                NavigationLink("Go to level \(level ?? 0 + 1)", value: level ?? 0 + 1)
+                NavigationLink("Go to level \((level ?? 0) + 1)", value: (level ?? 0) + 1)
                 Button("Show detail") {
                     router.preferredCompactColumn = .detail
                 }
