@@ -57,5 +57,8 @@ public struct NavigationSplitStack<Sidebar: Hashable, Detail: Hashable, SidebarV
         .onChange(of: horizontalSizeClass, initial: true) {
             router.horizontalSizeClass = horizontalSizeClass
         }
+        .onChange(of: ObjectIdentifier(router)) {
+            router.horizontalSizeClass = horizontalSizeClass
+        }
     }
 }
