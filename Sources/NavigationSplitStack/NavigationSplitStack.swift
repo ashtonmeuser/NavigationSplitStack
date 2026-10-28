@@ -1,5 +1,70 @@
-// The Swift Programming Language
-// https://docs.swift.org/swift-book
-public func hello() {
-    print("Hello, world!")
+//
+//  NavigationSplitStack.swift
+//  NavigationSplitStack
+//
+//  Created by Ashton Meuser on 2026-10-23.
+//
+
+import SwiftUI
+
+public struct NavigationSplitStack<Sidebar: Hashable, Detail: Hashable, SidebarView: View, DetailView: View>: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    private let sidebarView: (Sidebar?) -> SidebarView
+    private let detailView: (Detail) -> DetailView
+    private let emptyText: LocalizedStringKey?
+    @State private var router: NavigationSplitStackRouter<Sidebar, Detail>
+
+    public init(_ router: NavigationSplitStackRouter<Sidebar, Detail>, emptyText: LocalizedStringKey? = nil, @ViewBuilder sidebar: @escaping (Sidebar?) -> SidebarView, @ViewBuilder detail: @escaping (Detail) -> DetailView) {
+        self.router = router
+        sidebarView = sidebar
+        detailView = detail
+        self.emptyText = emptyText
+    }
+
+    public init(_ sidebarType: Sidebar.Type, _ detailType: Detail.Type, emptyText: LocalizedStringKey? = nil, @ViewBuilder sidebar: @escaping (Sidebar?) -> SidebarView, @ViewBuilder detail: @escaping (Detail) -> DetailView) {
+        self.init(NavigationSplitStackRouter<Sidebar, Detail>(), emptyText: emptyText, sidebar: sidebar, detail: detail)
+    }
+
+    public var body: some View {
+        NavigationSplitView(preferredCompactColumn: $router.preferredCompactColumn) {
+            NavigationStack(path: $router.sidebar) {
+                sidebarView(nil)
+                    .navigationDestination(for: Sidebar.self) {
+                        sidebarView($0)
+                    }
+            }
+//            .background {
+//                // Hacky way to ensure detail view is presented when selection changes in the case where sidebar does not contain an appropriate List
+//                // Note that using preferredCompactColumn to drive when the detail pane is displayed or not is buggy (see https://theempathicdev.de/blog/advanced-navigation-split-view-bugs)
+//                List(selection: $router.detailRoot) { }.hidden().frame(width: 0, height: 0)
+//            }
+#if os(macOS)
+            .navigationSplitViewColumnWidth(min: 260, ideal: 260)
+            .navigationBarBackButtonHidden()
+#endif
+        } detail: {
+            Group {
+                // This conditional must be applied outside of the navigation stack
+                // Otherwise, the navigation pop animation responds to the nil selection i.e. detail view is set to content unavailable during pop animation
+                if let detail = router.detail.last {
+                    NavigationStack(path: $router.detailRest) {
+                        detailView(detail)
+                            .navigationDestination(for: Detail.self) {
+                                detailView($0)
+                            }
+                    }
+                } else {
+                    // Only visible on wide platforms e.g. iPad
+                    ContentUnavailableView {
+                        Text(emptyText ?? "Make a selection")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .environment(router) // Insert selection object into environment
+        .onChange(of: horizontalSizeClass, initial: true) {
+            router.horizontalSizeClass = horizontalSizeClass
+        }
+    }
 }
