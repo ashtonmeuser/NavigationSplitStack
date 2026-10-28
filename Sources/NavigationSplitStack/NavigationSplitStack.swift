@@ -20,7 +20,7 @@ public struct NavigationSplitStack<
     @Bindable private var router: NavigationSplitStackRouter<Sidebar, Detail>
 
     public init(
-        _ router: NavigationSplitStackRouter<Sidebar, Detail>,
+        router: NavigationSplitStackRouter<Sidebar, Detail>,
         emptyText: LocalizedStringKey? = nil,
         @ViewBuilder sidebar: @escaping (Sidebar?) -> SidebarView,
         @ViewBuilder detail: @escaping (Detail) -> DetailView
