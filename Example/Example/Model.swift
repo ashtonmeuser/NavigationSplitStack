@@ -92,9 +92,9 @@ import Foundation
 import SQLiteData
 
 @Table("taxa")
-struct Taxa: Identifiable {
+struct Taxon: Identifiable {
     let id: Int64
-    let parentID: Taxa.ID?
+    let parentID: Taxon.ID?
     var name: String
     var scientificName: String?
 }
@@ -102,7 +102,8 @@ struct Taxa: Identifiable {
 @Table("species")
 struct Species: Identifiable {
     let id: Int64
-    let taxonID: Taxa.ID
+    let taxonID: Taxon.ID
     var name: String
+    var scientificName: String?
     var icon: String?
 }
