@@ -1,6 +1,6 @@
 //
-//  ExampleApp.swift
-//  Example
+//  TaxonomyApp.swift
+//  Taxonomy
 //
 //  Created by Ashton Meuser on 2026-10-23.
 //
@@ -9,7 +9,7 @@ import SQLiteData
 import SwiftUI
 
 @main
-struct ExampleApp: App {
+struct TaxonomyApp: App {
     init() {
         prepareDependencies {
             do {

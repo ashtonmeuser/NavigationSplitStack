@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C036ABC0308C1D4800683801"
-               BuildableName = "Example.app"
-               ReferencedContainer = "container:Example.xcodeproj">
+               BuildableName = "Taxonomy.app"
+               ReferencedContainer = "container:Examples.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -35,8 +35,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C036ABCD308C1D4900683801"
-               BuildableName = "ExampleTests.xctest"
-               ReferencedContainer = "container:Example.xcodeproj">
+               BuildableName = "TaxonomyTests.xctest"
+               ReferencedContainer = "container:Examples.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -45,8 +45,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C036ABD7308C1D4900683801"
-               BuildableName = "ExampleUITests.xctest"
-               ReferencedContainer = "container:Example.xcodeproj">
+               BuildableName = "TaxonomyUITests.xctest"
+               ReferencedContainer = "container:Examples.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -67,8 +67,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C036ABC0308C1D4800683801"
-            BuildableName = "Example.app"
-            ReferencedContainer = "container:Example.xcodeproj">
+            BuildableName = "Taxonomy.app"
+            ReferencedContainer = "container:Examples.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -83,8 +83,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C036ABC0308C1D4800683801"
-            BuildableName = "Example.app"
-            ReferencedContainer = "container:Example.xcodeproj">
+            BuildableName = "Taxonomy.app"
+            ReferencedContainer = "container:Examples.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

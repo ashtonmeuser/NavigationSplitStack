@@ -1,6 +1,6 @@
 //
 //  TaxonListView.swift
-//  Example
+//  Taxonomy
 //
 //  Created by Ashton Meuser on 2026-10-28.
 //
