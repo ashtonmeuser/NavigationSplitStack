@@ -10,6 +10,7 @@
 		C036ABF5308C1EDE00683801 /* NavigationSplitStack in Frameworks */ = {isa = PBXBuildFile; productRef = C036ABF4308C1EDE00683801 /* NavigationSplitStack */; };
 		C036ABF8308C353D00683801 /* NavigationSplitStack in Frameworks */ = {isa = PBXBuildFile; productRef = C036ABF7308C353D00683801 /* NavigationSplitStack */; };
 		C036AC01308E6CDC00683801 /* SQLiteData in Frameworks */ = {isa = PBXBuildFile; productRef = C036AC00308E6CDC00683801 /* SQLiteData */; };
+		C0A99EA03093C32D00EB31DC /* NavigationSplitStack in Frameworks */ = {isa = PBXBuildFile; productRef = C0A99E9F3093C32D00EB31DC /* NavigationSplitStack */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,6 +64,7 @@
 		C028EF123093BC4D00D9282E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				C0A99EA03093C32D00EB31DC /* NavigationSplitStack in Frameworks */,
 			);
 		};
 		C028EF283093BC4E00D9282E /* Frameworks */ = {
@@ -133,6 +135,9 @@
 				C028EF163093BC4D00D9282E /* Minimal */,
 			);
 			name = Minimal;
+			packageProductDependencies = (
+				C0A99E9F3093C32D00EB31DC /* NavigationSplitStack */,
+			);
 			productName = Minimal;
 			productReference = C028EF153093BC4D00D9282E /* Minimal.app */;
 			productType = "com.apple.product-type.application";
@@ -784,6 +789,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C036ABFF308E6CDC00683801 /* XCRemoteSwiftPackageReference "sqlite-data" */;
 			productName = SQLiteData;
+		};
+		C0A99E9F3093C32D00EB31DC /* NavigationSplitStack */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C036ABF6308C353D00683801 /* XCLocalSwiftPackageReference "../../NavigationSplitStack" */;
+			productName = NavigationSplitStack;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
