@@ -5,13 +5,15 @@
 //  Created by Ashton Meuser on 2026-10-29.
 //
 
-import SwiftUI
 import NavigationSplitStack
+import SwiftUI
 
 typealias Router = NavigationSplitStackRouter<Int, Int>
 
 extension Router {
-    var fullPath: String { "\(sidebar.map { String($0) }.joined(separator: "→")) | \(detail.map { String($0) }.joined(separator: "→"))" }
+    var fullPath: String {
+        "\(sidebar.map { String($0) }.joined(separator: "→")) | \(detail.map { String($0) }.joined(separator: "→"))"
+    }
 }
 
 struct ContentView: View {
@@ -32,7 +34,10 @@ struct ContentView: View {
                         .accessibilityIdentifier("sidebarFullPath")
                 }
                 .padding(.bottom)
-                NavigationLink("Navigate to Sidebar \(nextSidebar)", value: nextSidebar)
+                NavigationLink(
+                    "Navigate to Sidebar \(nextSidebar)",
+                    value: nextSidebar
+                )
                 Button("Push Sidebar \(nextSidebar)") {
                     router.sidebar.append(nextSidebar)
                 }
@@ -80,7 +85,10 @@ struct ContentView: View {
                         .accessibilityIdentifier("detailFullPath")
                 }
                 .padding(.bottom)
-                NavigationLink("Navigate to Detail \(nextDetail)", value: nextDetail)
+                NavigationLink(
+                    "Navigate to Detail \(nextDetail)",
+                    value: nextDetail
+                )
                 Button("Push Detail \(nextDetail)") {
                     router.detail.append(nextDetail)
                 }

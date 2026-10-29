@@ -6,8 +6,9 @@
 //
 
 import XCTest
+
 #if os(iOS)
-import UIKit
+    import UIKit
 #endif
 
 final class MinimalUITests: XCTestCase {
@@ -103,7 +104,9 @@ final class MinimalUITests: XCTestCase {
         try requireWideLayout()
         let app = launchApp()
         assertSidebar(0, path: "|", in: app)
-        XCTAssertTrue(app.staticTexts["Make a selection"].waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            app.staticTexts["Make a selection"].waitForExistence(timeout: 5)
+        )
         app.buttons["sidebarHideSidebar"].activate()
         XCTAssertTrue(app.staticTexts["Make a selection"].isHittable)
         XCTAssertFalse(app.staticTexts["sidebarTitle"].isHittable)
@@ -131,7 +134,9 @@ final class MinimalUITests: XCTestCase {
         assertDetail(1, path: "1|1", in: app)
         app.buttons["Clear Detail"].activate()
         assertSidebar(1, path: "1|", in: app)
-        XCTAssertTrue(app.staticTexts["Make a selection"].waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            app.staticTexts["Make a selection"].waitForExistence(timeout: 5)
+        )
     }
 
     @MainActor
@@ -200,28 +205,51 @@ final class MinimalUITests: XCTestCase {
     }
 
     @MainActor
-    private func assertSidebar(_ level: Int, path: String, in app: XCUIApplication) {
+    private func assertSidebar(
+        _ level: Int,
+        path: String,
+        in app: XCUIApplication
+    ) {
         assertVisibleTitle("sidebarTitle", label: "Sidebar \(level)", in: app)
         XCTAssertEqual(pathText("sidebarFullPath", in: app), path)
     }
 
     @MainActor
-    private func assertDetail(_ level: Int, path: String, in app: XCUIApplication) {
+    private func assertDetail(
+        _ level: Int,
+        path: String,
+        in app: XCUIApplication
+    ) {
         assertVisibleTitle("detailTitle", label: "Detail \(level)", in: app)
         XCTAssertEqual(pathText("detailFullPath", in: app), path)
     }
 
     @MainActor
-    private func assertVisibleTitle(_ identifier: String, label: String, in app: XCUIApplication) {
+    private func assertVisibleTitle(
+        _ identifier: String,
+        label: String,
+        in app: XCUIApplication
+    ) {
         let title = app.staticTexts[identifier]
-        XCTAssertTrue(title.waitForExistence(timeout: 5), "Expected element \(identifier)")
-        XCTAssertEqual(accessibilityText(of: title), label, "Unexpected title for \(identifier)")
+        XCTAssertTrue(
+            title.waitForExistence(timeout: 5),
+            "Expected element \(identifier)"
+        )
+        XCTAssertEqual(
+            accessibilityText(of: title),
+            label,
+            "Unexpected title for \(identifier)"
+        )
         XCTAssertTrue(title.isHittable, "Expected \(label) to be on screen")
     }
 
     @MainActor
-    private func pathText(_ identifier: String, in app: XCUIApplication) -> String {
-        accessibilityText(of: app.staticTexts[identifier]).filter { !$0.isWhitespace }
+    private func pathText(_ identifier: String, in app: XCUIApplication)
+        -> String
+    {
+        accessibilityText(of: app.staticTexts[identifier]).filter {
+            !$0.isWhitespace
+        }
     }
 
     @MainActor
@@ -234,31 +262,37 @@ final class MinimalUITests: XCTestCase {
     @MainActor
     private func requirePhone() throws {
         #if os(iOS)
-        try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .phone, "Requires an iPhone")
+            try XCTSkipUnless(
+                UIDevice.current.userInterfaceIdiom == .phone,
+                "Requires an iPhone"
+            )
         #else
-        throw XCTSkip("Requires an iPhone")
+            throw XCTSkip("Requires an iPhone")
         #endif
     }
 
     @MainActor
     private func requireWideLayout() throws {
         #if os(iOS)
-        try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .pad, "Requires iPad or macOS")
+            try XCTSkipUnless(
+                UIDevice.current.userInterfaceIdiom == .pad,
+                "Requires iPad or macOS"
+            )
         #elseif os(macOS)
-        return
+            return
         #else
-        throw XCTSkip("Requires iPad or macOS")
+            throw XCTSkip("Requires iPad or macOS")
         #endif
     }
 }
 
-private extension XCUIElement {
+extension XCUIElement {
     @MainActor
-    func activate() {
+    fileprivate func activate() {
         #if os(macOS)
-        click()
+            click()
         #else
-        tap()
+            tap()
         #endif
     }
 }

@@ -5,8 +5,8 @@
 //  Created by Ashton Meuser on 2026-10-23.
 //
 
-import SwiftUI
 import Dependencies
+import SwiftUI
 
 public struct NavigationSplitStack<
     Sidebar: Hashable,
@@ -39,10 +39,12 @@ public struct NavigationSplitStack<
         ) {
             // HACK: This thin binding wrapper fixes a bug where navigtion home (empty sidebar, empty detail)
             // from a detail view fails.
-            NavigationStack(path: Binding(
-                get: { router.sidebar },
-                set: { router.sidebar = $0 }
-            )) {
+            NavigationStack(
+                path: Binding(
+                    get: { router.sidebar },
+                    set: { router.sidebar = $0 }
+                )
+            ) {
                 makeSidebar(nil)
                     .navigationDestination(for: Sidebar.self) {
                         makeSidebar($0)

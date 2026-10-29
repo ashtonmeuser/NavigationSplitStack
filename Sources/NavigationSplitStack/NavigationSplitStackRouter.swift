@@ -5,8 +5,8 @@
 //  Created by Ashton Meuser on 2026-10-23.
 //
 
-import SwiftUI
 import Dependencies
+import SwiftUI
 
 // TODO: Documentation
 @MainActor @Observable
@@ -94,10 +94,12 @@ extension NavigationSplitStackRouter: nonisolated DependencyKey {
 
     /// Live models must capture the router supplied by their navigation container.
     public nonisolated static var liveValue: Value {
-        preconditionFailure("""
+        preconditionFailure(
+            """
             NavigationSplitStackRouter dependency is only available within NavigationSplitStack sidebar and detail views.
             Alternatively, inject the router using withDependencies.
-            """)
+            """
+        )
     }
 
     public nonisolated static var previewValue: Value { Value() }
