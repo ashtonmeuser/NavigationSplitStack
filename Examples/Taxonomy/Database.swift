@@ -13,9 +13,7 @@ extension DependencyValues {
         let database = try SQLiteData.defaultDatabase()
         var migrator = DatabaseMigrator()
 
-//        #if DEBUG
-            migrator.eraseDatabaseOnSchemaChange = true
-//        #endif
+        migrator.eraseDatabaseOnSchemaChange = true
 
         migrator.registerMigration("Create the 'taxa' table") { db in
             try #sql(
@@ -48,7 +46,12 @@ extension DependencyValues {
         }
 
         migrator.registerMigration("Seed taxonomy") { db in
-            guard let url = Bundle.main.url(forResource: "taxonomy-seed", withExtension: "sql") else {
+            guard
+                let url = Bundle.main.url(
+                    forResource: "taxonomy-seed",
+                    withExtension: "sql"
+                )
+            else {
                 fatalError("Missing bundled resource: taxonomy-seed.sql")
             }
             let sql = try String(contentsOf: url, encoding: .utf8)

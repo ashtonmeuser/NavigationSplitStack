@@ -5,9 +5,9 @@
 //  Created by Ashton Meuser on 2026-10-28.
 //
 
-import SwiftUI
 import Dependencies
 import NavigationSplitStack
+import SwiftUI
 
 enum SidebarDestination: nonisolated Hashable, Sendable {
     case `class`(Taxon.ID)
@@ -18,7 +18,9 @@ enum DetailDestination: nonisolated Hashable, Sendable {
     case species(Species.ID)
 }
 
-typealias Router = NavigationSplitStackRouter<SidebarDestination, DetailDestination>
+typealias Router = NavigationSplitStackRouter<
+    SidebarDestination, DetailDestination
+>
 
 struct ContentView: View {
     @State private var router = Router()

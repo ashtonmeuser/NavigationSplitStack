@@ -18,7 +18,9 @@ struct TaxonomyApp: App {
                 fatalError("Failed to bootstrap database: \(error)")
             }
         }
-        print("Database:\n\(URL.applicationSupportDirectory.path(percentEncoded: false))")
+        print(
+            "Database:\n\(URL.applicationSupportDirectory.path(percentEncoded: false))"
+        )
     }
 
     var body: some Scene {

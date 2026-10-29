@@ -5,10 +5,10 @@
 //  Created by Ashton Meuser on 2026-10-28.
 //
 
-import SwiftUI
-import SQLiteData
 import Dependencies
 import NavigationSplitStack
+import SQLiteData
+import SwiftUI
 
 @MainActor
 @Observable

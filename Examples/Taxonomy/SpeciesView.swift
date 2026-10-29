@@ -5,9 +5,9 @@
 //  Created by Ashton Meuser on 2026-10-28.
 //
 
-import SwiftUI
-import SQLiteData
 import NavigationSplitStack
+import SQLiteData
+import SwiftUI
 
 @MainActor
 @Observable
@@ -72,8 +72,7 @@ final class SpeciesModel {
     }
 
     func showSidebar(_ show: Bool) {
-        if show { router.showSidebar() }
-        else { router.hideSidebar() }
+        if show { router.showSidebar() } else { router.hideSidebar() }
     }
 
     func goToRootDetail() {
@@ -97,10 +96,12 @@ final class SpeciesModel {
 
     var markdown: AttributedString? {
         guard let species, let taxonomicClass, let family else { return nil }
-        return try? AttributedString(markdown: """
-            The \(species.name) is a part of the **[\(family.name)](taxonomy:///\(taxonomicClass.id)/\(family.id))** \
-            family within the **[\(taxonomicClass.name)](taxonomy:///\(taxonomicClass.id))** class.
-            """)
+        return try? AttributedString(
+            markdown: """
+                The \(species.name) is a part of the **[\(family.name)](taxonomy:///\(taxonomicClass.id)/\(family.id))** \
+                family within the **[\(taxonomicClass.name)](taxonomy:///\(taxonomicClass.id))** class.
+                """
+        )
     }
 
     func openURL(_ url: URL) -> OpenURLAction.Result {
@@ -139,7 +140,10 @@ struct SpeciesView: View {
                         }
                         if let markdown = model.markdown {
                             Text(markdown)
-                                .environment(\.openURL, OpenURLAction { model.openURL($0) } )
+                                .environment(
+                                    \.openURL,
+                                    OpenURLAction { model.openURL($0) }
+                                )
                         }
                         if !model.sameFamilySpecies.isEmpty {
                             VStack {
@@ -187,7 +191,10 @@ struct SpeciesView: View {
                         Button {
                             model.goToRootDetail()
                         } label: {
-                            Label("Root Species", systemImage: "arrow.up.folder")
+                            Label(
+                                "Root Species",
+                                systemImage: "arrow.up.folder"
+                            )
                         }
                     }
                     Section("Debug") {

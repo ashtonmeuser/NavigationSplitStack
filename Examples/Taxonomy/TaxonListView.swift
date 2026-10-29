@@ -33,12 +33,15 @@ final class TaxonListModel {
                 .where { $0.parentID.is(parentID) }
                 .group(by: \.id)
                 .order(by: \.name)
-                .leftJoin(Taxon.as(ChildTaxon.self).all) { $0.id.is($1.parentID) }
+                .leftJoin(Taxon.as(ChildTaxon.self).all) {
+                    $0.id.is($1.parentID)
+                }
                 .leftJoin(Species.all) { $0.id.eq($2.taxonID) }
                 .select { taxon, childTaxon, species in
                     TaxonWithChildCount.Columns(
                         taxon: taxon,
-                        count: childTaxon.id.count(distinct: true) + species.id.count(distinct: true)
+                        count: childTaxon.id.count(distinct: true)
+                            + species.id.count(distinct: true)
                     )
                 },
             animation: .default
@@ -64,7 +67,8 @@ struct TaxonListView: View {
     var body: some View {
         List(model.childTaxa) { taxonWithChildCount in
             let taxon = taxonWithChildCount.taxon
-            let destination: SidebarDestination = taxon.parentID == nil ? .class(taxon.id) : .family(taxon.id)
+            let destination: SidebarDestination =
+                taxon.parentID == nil ? .class(taxon.id) : .family(taxon.id)
 
             NavigationLink(value: destination) {
                 HStack {
