@@ -65,7 +65,7 @@ final class SpeciesModel {
         router.detail.append(.species(species.id))
     }
 
-    var isDetailRoot: Bool { router.detail.count <= 1 }
+    var detailDepth: Int { router.detail.count }
 
     func goHome() {
         router.sidebar = []
@@ -76,44 +76,42 @@ final class SpeciesModel {
         else { router.hideSidebar() }
     }
 
-    func goToDetailRoot() {
+    func goToRootDetail() {
         router.detail.removeLast(router.detail.count - 1)
     }
 
-    func printPath() {
-        print("""
+    func goToPreviousDetail() {
+        router.detail.removeLast()
+    }
+
+    var alertMessage: String?
+
+    func showFullPath() {
+        let message = """
             Sidebar: \(router.sidebar.map { String(describing: $0) }.joined(separator: " → "))
             Detail: \(router.detail.map { String(describing: $0) }.joined(separator: " → "))
-            """)
+            """
+        alertMessage = message
+        print(message)
     }
 
     var markdown: AttributedString? {
         guard let species, let taxonomicClass, let family else { return nil }
         return try? AttributedString(markdown: """
-            The \(species.name) is a part of the [\(family.name)](taxonomy://family) \
-            family within the [\(taxonomicClass.name)](taxonomy://class) class.
+            The \(species.name) is a part of the **[\(family.name)](taxonomy:///\(taxonomicClass.id)/\(family.id))** \
+            family within the **[\(taxonomicClass.name)](taxonomy:///\(taxonomicClass.id))** class.
             """)
     }
 
     func openURL(_ url: URL) -> OpenURLAction.Result {
-        // A better URL format could be used to navigation to an arbitrary class, family, and/or species.
-        guard url.scheme == "taxonomy", let taxonomicClass, let family else { return .discarded }
-
-        switch url.host {
-        case "class":
-            router.sidebar = [.class(taxonomicClass.id)]
-        case "family":
-            router.sidebar = [.class(taxonomicClass.id), .family(family.id)]
-        default:
-            return .discarded
-        }
-
+        let ids = url.path.split(separator: "/").compactMap { Taxon.ID($0) }
+        guard (1...2).contains(ids.count) else { return .discarded }
+        router.sidebar = [.class(ids[0])] + ids.dropFirst().map { .family($0) }
         return .handled
     }
 }
 
 struct SpeciesView: View {
-    @Environment(Router.self) private var router
     @State private var model: SpeciesModel
 
     init(speciesID: Taxon.ID) {
@@ -124,34 +122,38 @@ struct SpeciesView: View {
         Group {
             if let species = model.species {
                 ScrollView {
-                    VStack {
-                        if let icon = species.icon {
-                            Text(icon)
+                    VStack(spacing: 32) {
+                        VStack {
+                            if let icon = species.icon {
+                                Text(icon)
+                                    .font(.system(size: 120))
+                            }
+                            if let scientificName = species.scientificName {
+                                Text(scientificName)
+                                    .italic()
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                        Text(species.name)
+                        if let description = species.description {
+                            Text(description)
+                        }
                         if let markdown = model.markdown {
                             Text(markdown)
                                 .environment(\.openURL, OpenURLAction { model.openURL($0) } )
                         }
-                        Button("Go home") {
-                            model.goHome()
+                        if !model.sameFamilySpecies.isEmpty {
+                            VStack {
+                                Text("Species in the same family")
+                                ForEach(model.sameFamilySpecies) { species in
+                                    Button(species.name) {
+                                        model.pushSpecies(species)
+                                    }
+                                    .fontWeight(.bold)
+                                }
+                            }
                         }
-                        Button("Go home via env router") {
-                            router.sidebar = []
-                        }
-//                        Button("Species ID") {
-//                            print()
-//                        }
                     }
-                    .padding(.bottom)
-                    Text("Species in same fam:")
-                    ForEach(model.sameFamilySpecies) { species in
-//                    List(model.sameFamilySpecies) { species in
-                        Button(species.name) {
-                            model.pushSpecies(species)
-                        }
-//                        Text(species.name)
-                    }
+                    .padding()
                 }
             }
         }
@@ -167,25 +169,32 @@ struct SpeciesView: View {
                     Button {
                         model.showSidebar(true)
                     } label: {
-                        Label("Show Sidebar", systemImage: "house")
+                        Label("Show Sidebar", systemImage: "eye")
                     }
                     Button {
                         model.showSidebar(false)
                     } label: {
-                        Label("Hide Sidebar", systemImage: "house")
+                        Label("Hide Sidebar", systemImage: "eye.slash")
                     }
-                    if !model.isDetailRoot {
+                    if model.detailDepth > 1 {
                         Button {
-                            model.goToDetailRoot()
+                            model.goToPreviousDetail()
                         } label: {
-                            Label("Go to Detail Root", systemImage: "house")
+                            Label("Previous Species", systemImage: "arrow.left")
+                        }
+                    }
+                    if model.detailDepth > 2 {
+                        Button {
+                            model.goToRootDetail()
+                        } label: {
+                            Label("Root Species", systemImage: "arrow.up.folder")
                         }
                     }
                     Section("Debug") {
                         Button {
-                            model.printPath()
+                            model.showFullPath()
                         } label: {
-                            Label("Print Full Path", systemImage: "house")
+                            Label("Show Full Path", systemImage: "house")
                         }
                     }
                 } label: {
@@ -193,9 +202,14 @@ struct SpeciesView: View {
                 }
             }
         }
+        .alert("Alert", item: $model.alertMessage) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { message in
+            Text(message)
+        }
     }
 }
 
-//#Preview {
-//    SpeciesView()
-//}
+#Preview(traits: .dependencies { try! $0.bootstrapDatabase() }) {
+    SpeciesView(speciesID: 5)
+}
