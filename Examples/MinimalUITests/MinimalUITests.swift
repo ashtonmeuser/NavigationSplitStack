@@ -24,11 +24,11 @@ final class MinimalUITests: XCTestCase {
         assertSidebar(0, path: "|", in: app)
 
         for push in ["Navigate to Sidebar 1", "sidebarPushNextSidebar"] {
-            app.buttons[push].tap()
+            app.buttons[push].activate()
             assertSidebar(1, path: "1|", in: app)
-            app.buttons["sidebarGoToDetail"].tap()
+            app.buttons["sidebarGoToDetail"].activate()
             assertDetail(1, path: "1|1", in: app)
-            app.buttons["detailGoToRootSidebar"].tap()
+            app.buttons["detailGoToRootSidebar"].activate()
             assertSidebar(0, path: "|", in: app)
         }
     }
@@ -37,32 +37,32 @@ final class MinimalUITests: XCTestCase {
     func testCompactDepthAndPopping() throws {
         try requirePhone()
         let app = launchApp()
-        app.buttons["sidebarPushNextSidebar"].tap()
+        app.buttons["sidebarPushNextSidebar"].activate()
         assertSidebar(1, path: "1|", in: app)
-        app.buttons["Navigate to Sidebar 2"].tap()
+        app.buttons["Navigate to Sidebar 2"].activate()
         assertSidebar(2, path: "1→2|", in: app)
-        app.buttons["Previous Sidebar"].tap()
+        app.buttons["Previous Sidebar"].activate()
         assertSidebar(1, path: "1|", in: app)
-        app.buttons["sidebarPushNextSidebar"].tap()
+        app.buttons["sidebarPushNextSidebar"].activate()
         assertSidebar(2, path: "1→2|", in: app)
-        app.buttons["sidebarPushNextSidebar"].tap()
+        app.buttons["sidebarPushNextSidebar"].activate()
         assertSidebar(3, path: "1→2→3|", in: app)
-        app.buttons["sidebarGoToRootSidebar"].tap()
+        app.buttons["sidebarGoToRootSidebar"].activate()
         assertSidebar(0, path: "|", in: app)
 
-        app.buttons["sidebarGoToDetail"].tap()
+        app.buttons["sidebarGoToDetail"].activate()
         assertDetail(1, path: "|1", in: app)
-        app.buttons["Navigate to Detail 2"].tap()
+        app.buttons["Navigate to Detail 2"].activate()
         assertDetail(2, path: "|1→2", in: app)
-        app.buttons["detailPushNextDetail"].tap()
+        app.buttons["detailPushNextDetail"].activate()
         assertDetail(3, path: "|1→2→3", in: app)
-        app.buttons["Root Detail"].tap()
+        app.buttons["Root Detail"].activate()
         assertDetail(1, path: "|1", in: app)
-        app.buttons["detailPushNextDetail"].tap()
+        app.buttons["detailPushNextDetail"].activate()
         assertDetail(2, path: "|1→2", in: app)
-        app.buttons["Previous Detail"].tap()
+        app.buttons["Previous Detail"].activate()
         assertDetail(1, path: "|1", in: app)
-        app.buttons["Clear Detail"].tap()
+        app.buttons["Clear Detail"].activate()
         assertSidebar(0, path: "|", in: app)
     }
 
@@ -70,29 +70,29 @@ final class MinimalUITests: XCTestCase {
     func testCompactColumnChangesAndRootReplacement() throws {
         try requirePhone()
         let app = launchApp()
-        app.buttons["sidebarHideSidebar"].tap()
+        app.buttons["sidebarHideSidebar"].activate()
         assertSidebar(0, path: "|", in: app)
-        app.buttons["sidebarPushNextSidebar"].tap()
+        app.buttons["sidebarPushNextSidebar"].activate()
         assertSidebar(1, path: "1|", in: app)
-        app.buttons["sidebarGoToDetail"].tap()
+        app.buttons["sidebarGoToDetail"].activate()
         assertDetail(1, path: "1|1", in: app)
-        app.buttons["detailShowSidebar"].tap()
+        app.buttons["detailShowSidebar"].activate()
         assertSidebar(1, path: "1|", in: app)
-        app.buttons["sidebarGoToDetail"].tap()
+        app.buttons["sidebarGoToDetail"].activate()
         assertDetail(1, path: "1|1", in: app)
-        app.buttons["Show Current Sidebar"].tap()
+        app.buttons["Show Current Sidebar"].activate()
         assertSidebar(1, path: "1|", in: app)
-        app.buttons["sidebarGoToDetail"].tap()
+        app.buttons["sidebarGoToDetail"].activate()
         assertDetail(1, path: "1|1", in: app)
-        app.buttons["detailPushNextSidebar"].tap()
+        app.buttons["detailPushNextSidebar"].activate()
         assertSidebar(2, path: "1→2|", in: app)
-        app.buttons["sidebarGoToDetail"].tap()
+        app.buttons["sidebarGoToDetail"].activate()
         assertDetail(1, path: "1→2|1", in: app)
-        app.buttons["Replace Detail Root with Detail 2"].tap()
+        app.buttons["Replace Detail Root with Detail 2"].activate()
         assertDetail(2, path: "1→2|2", in: app)
-        app.buttons["Replace Detail Root with Detail 1"].tap()
+        app.buttons["Replace Detail Root with Detail 1"].activate()
         assertDetail(1, path: "1→2|1", in: app)
-        app.buttons["detailGoToRootSidebar"].tap()
+        app.buttons["detailGoToRootSidebar"].activate()
         assertSidebar(0, path: "|", in: app)
     }
 
@@ -104,7 +104,7 @@ final class MinimalUITests: XCTestCase {
         let app = launchApp()
         assertSidebar(0, path: "|", in: app)
         XCTAssertTrue(app.staticTexts["Make a selection"].waitForExistence(timeout: 5))
-        app.buttons["sidebarHideSidebar"].tap()
+        app.buttons["sidebarHideSidebar"].activate()
         XCTAssertTrue(app.staticTexts["Make a selection"].isHittable)
         XCTAssertFalse(app.staticTexts["sidebarTitle"].isHittable)
     }
@@ -113,23 +113,23 @@ final class MinimalUITests: XCTestCase {
     func testWideShowHideAndClearDetail() throws {
         try requireWideLayout()
         let app = launchApp()
-        app.buttons["sidebarPushNextSidebar"].tap()
+        app.buttons["sidebarPushNextSidebar"].activate()
         assertSidebar(1, path: "1|", in: app)
-        app.buttons["sidebarGoToDetail"].tap()
+        app.buttons["sidebarGoToDetail"].activate()
         assertSidebar(1, path: "1|1", in: app)
         assertDetail(1, path: "1|1", in: app)
-        app.buttons["sidebarHideSidebar"].tap()
+        app.buttons["sidebarHideSidebar"].activate()
         assertDetail(1, path: "1|1", in: app)
         XCTAssertFalse(app.staticTexts["sidebarTitle"].isHittable)
-        app.buttons["detailShowSidebar"].tap()
+        app.buttons["detailShowSidebar"].activate()
         assertSidebar(1, path: "1|1", in: app)
         assertDetail(1, path: "1|1", in: app)
-        app.buttons["sidebarHideSidebar"].tap()
+        app.buttons["sidebarHideSidebar"].activate()
         assertDetail(1, path: "1|1", in: app)
-        app.buttons["Show Current Sidebar"].tap()
+        app.buttons["Show Current Sidebar"].activate()
         assertSidebar(1, path: "1|1", in: app)
         assertDetail(1, path: "1|1", in: app)
-        app.buttons["Clear Detail"].tap()
+        app.buttons["Clear Detail"].activate()
         assertSidebar(1, path: "1|", in: app)
         XCTAssertTrue(app.staticTexts["Make a selection"].waitForExistence(timeout: 5))
     }
@@ -138,30 +138,30 @@ final class MinimalUITests: XCTestCase {
     func testWidePathsAndDetailRootReplacement() throws {
         try requireWideLayout()
         let app = launchApp()
-        app.buttons["sidebarPushNextSidebar"].tap()
+        app.buttons["sidebarPushNextSidebar"].activate()
         assertSidebar(1, path: "1|", in: app)
-        app.buttons["sidebarGoToDetail"].tap()
+        app.buttons["sidebarGoToDetail"].activate()
         assertDetail(1, path: "1|1", in: app)
-        app.buttons["Replace Detail Root with Detail 2"].tap()
+        app.buttons["Replace Detail Root with Detail 2"].activate()
         assertDetail(2, path: "1|2", in: app)
-        app.buttons["sidebarGoToDetail"].tap()
+        app.buttons["sidebarGoToDetail"].activate()
         assertDetail(1, path: "1|1", in: app)
-        app.buttons["Navigate to Detail 2"].tap()
+        app.buttons["Navigate to Detail 2"].activate()
         assertDetail(2, path: "1|1→2", in: app)
-        app.buttons["detailPushNextDetail"].tap()
+        app.buttons["detailPushNextDetail"].activate()
         assertDetail(3, path: "1|1→2→3", in: app)
-        app.buttons["Previous Detail"].tap()
+        app.buttons["Previous Detail"].activate()
         assertDetail(2, path: "1|1→2", in: app)
-        app.buttons["detailPushNextSidebar"].tap()
+        app.buttons["detailPushNextSidebar"].activate()
         assertSidebar(2, path: "1→2|1→2", in: app)
         assertDetail(2, path: "1→2|1→2", in: app)
-        app.buttons["Previous Sidebar"].tap()
+        app.buttons["Previous Sidebar"].activate()
         assertSidebar(1, path: "1|1→2", in: app)
         assertDetail(2, path: "1|1→2", in: app)
-        app.buttons["detailGoToRootSidebar"].tap()
+        app.buttons["detailGoToRootSidebar"].activate()
         assertSidebar(0, path: "|1→2", in: app)
         assertDetail(2, path: "|1→2", in: app)
-        app.buttons["sidebarPushNextDetail"].tap()
+        app.buttons["sidebarPushNextDetail"].activate()
         assertSidebar(0, path: "|1→2→3", in: app)
         assertDetail(3, path: "|1→2→3", in: app)
     }
@@ -174,13 +174,13 @@ final class MinimalUITests: XCTestCase {
 
         let nativeHide = app.buttons["Hide Sidebar"]
         XCTAssertTrue(nativeHide.waitForExistence(timeout: 5))
-        nativeHide.tap()
+        nativeHide.activate()
         XCTAssertFalse(app.staticTexts["sidebarTitle"].isHittable)
         XCTAssertTrue(app.staticTexts["Make a selection"].isHittable)
 
         let nativeShow = app.buttons["Show Sidebar"]
         XCTAssertTrue(nativeShow.waitForExistence(timeout: 5))
-        nativeShow.tap()
+        nativeShow.activate()
         assertSidebar(0, path: "|", in: app)
     }
 
@@ -240,6 +240,17 @@ final class MinimalUITests: XCTestCase {
         return
         #else
         throw XCTSkip("Requires iPad or macOS")
+        #endif
+    }
+}
+
+private extension XCUIElement {
+    @MainActor
+    func activate() {
+        #if os(macOS)
+        click()
+        #else
+        tap()
         #endif
     }
 }
