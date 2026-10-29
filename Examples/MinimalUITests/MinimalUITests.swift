@@ -175,12 +175,20 @@ final class MinimalUITests: XCTestCase {
         let nativeHide = app.buttons["Hide Sidebar"]
         XCTAssertTrue(nativeHide.waitForExistence(timeout: 5))
         nativeHide.activate()
-        XCTAssertFalse(app.staticTexts["sidebarTitle"].isHittable)
+        let sidebarTitle = app.staticTexts["sidebarTitle"]
+        XCTAssertTrue(
+            sidebarTitle.wait(for: \.isHittable, toEqual: false, timeout: 5),
+            "Sidebar did not finish hiding"
+        )
         XCTAssertTrue(app.staticTexts["Make a selection"].isHittable)
 
         let nativeShow = app.buttons["Show Sidebar"]
         XCTAssertTrue(nativeShow.waitForExistence(timeout: 5))
         nativeShow.activate()
+        XCTAssertTrue(
+            sidebarTitle.wait(for: \.isHittable, toEqual: true, timeout: 5),
+            "Sidebar did not finish showing"
+        )
         assertSidebar(0, path: "|", in: app)
     }
 
