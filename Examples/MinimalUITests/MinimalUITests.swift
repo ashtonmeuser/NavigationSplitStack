@@ -16,6 +16,37 @@ final class MinimalUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    // MARK: All Layouts
+
+    @MainActor
+    func testSidebarPushAndPop() {
+        let app = launchApp()
+        assertSidebar(0, path: "|", in: app)
+
+        app.buttons["sidebarPushNextSidebar"].activate()
+        assertSidebar(1, path: "1|", in: app)
+        app.buttons["sidebarPushNextSidebar"].activate()
+        assertSidebar(2, path: "1→2|", in: app)
+        app.buttons["Previous Sidebar"].activate()
+        assertSidebar(1, path: "1|", in: app)
+    }
+
+    @MainActor
+    func testDetailPushPopAndRootReplacement() {
+        let app = launchApp()
+        app.buttons["sidebarGoToDetail"].activate()
+        assertDetail(1, path: "|1", in: app)
+
+        app.buttons["detailPushNextDetail"].activate()
+        assertDetail(2, path: "|1→2", in: app)
+        app.buttons["Previous Detail"].activate()
+        assertDetail(1, path: "|1", in: app)
+        app.buttons["Replace Detail Root with Detail 2"].activate()
+        assertDetail(2, path: "|2", in: app)
+        app.buttons["Clear Detail"].activate()
+        assertSidebar(0, path: "|", in: app)
+    }
+
     // MARK: Compact Layout
 
     @MainActor
