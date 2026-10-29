@@ -49,8 +49,8 @@ public struct NavigationSplitStack<
             #endif
         } detail: {
             Group {
-                // This conditional must be applied outside of the navigation stack
-                // Otherwise, the navigation pop animation responds to the nil selection i.e. detail view is set to content unavailable during pop animation
+                // This conditional must be applied outside of the navigation stack.
+                // Otherwise, the navigation pop animation responds to the nil selection i.e. detail view is set to content unavailable during pop animation.
                 if let detail = router.detail.first {
                     NavigationStack(path: $router.detailRest) {
                         makeDetail(detail)
@@ -62,7 +62,7 @@ public struct NavigationSplitStack<
                             }
                     }
                 } else {
-                    // Only visible on wide platforms e.g. iPad
+                    // Only visible on wide platforms e.g. iPad.
                     ContentUnavailableView {
                         Text(emptyText ?? "Make a selection")
                             .foregroundStyle(.secondary)

@@ -23,7 +23,7 @@ public final class NavigationSplitStackRouter<
             else {
                 return
             }
-            // Returning to the sidebar clears all detail selection in compact context
+            // Returning to the sidebar clears all detail selection in compact context.
             if !detail.isEmpty {
                 detail.removeAll()
             }
