@@ -205,15 +205,22 @@ final class MinimalUITests: XCTestCase {
 
     @MainActor
     private func assertVisibleTitle(_ identifier: String, label: String, in app: XCUIApplication) {
-        let title = app.staticTexts.matching(identifier: identifier)
-            .matching(NSPredicate(format: "label == %@", label)).firstMatch
-        XCTAssertTrue(title.waitForExistence(timeout: 5), "Expected \(label)")
+        let title = app.staticTexts[identifier]
+        XCTAssertTrue(title.waitForExistence(timeout: 5), "Expected element \(identifier)")
+        XCTAssertEqual(accessibilityText(of: title), label, "Unexpected title for \(identifier)")
         XCTAssertTrue(title.isHittable, "Expected \(label) to be on screen")
     }
 
     @MainActor
     private func pathText(_ identifier: String, in app: XCUIApplication) -> String {
-        app.staticTexts[identifier].label.filter { !$0.isWhitespace }
+        accessibilityText(of: app.staticTexts[identifier]).filter { !$0.isWhitespace }
+    }
+
+    @MainActor
+    private func accessibilityText(of element: XCUIElement) -> String {
+        if !element.label.isEmpty { return element.label }
+        if let value = element.value as? String, !value.isEmpty { return value }
+        return element.title
     }
 
     @MainActor
