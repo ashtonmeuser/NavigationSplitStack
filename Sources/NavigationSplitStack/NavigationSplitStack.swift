@@ -54,6 +54,9 @@ public struct NavigationSplitStack<
                 if let detail = router.detail.first {
                     NavigationStack(path: $router.detailRest) {
                         makeDetail(detail)
+                            // A new root destination needs fresh view state.
+                            // Because it is not represented in the navigation path, an explicit ID is provided.
+                            .id(detail)
                             .navigationDestination(for: Detail.self) {
                                 makeDetail($0)
                             }
