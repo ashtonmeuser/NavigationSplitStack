@@ -48,6 +48,18 @@ public struct NavigationSplitStack<
                 makeSidebar(nil)
                     .navigationDestination(for: Sidebar.self) {
                         makeSidebar($0)
+                            #if os(macOS)
+                                .toolbar {
+                                    ToolbarItem(placement: .automatic) {
+                                        Button(
+                                            "Back",
+                                            systemImage: "chevron.left"
+                                        ) {
+                                            router.sidebar.removeLast()
+                                        }
+                                    }
+                                }
+                            #endif
                     }
             }
             #if os(macOS)
