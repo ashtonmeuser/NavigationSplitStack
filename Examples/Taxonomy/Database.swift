@@ -39,7 +39,8 @@ extension DependencyValues {
                     "taxonID" INTEGER REFERENCES "taxa"("id") ON DELETE CASCADE,
                     "name" TEXT NOT NULL,
                     "scientificName" TEXT,
-                    "icon" TEXT
+                    "icon" TEXT,
+                    "description" TEXT
                 ) STRICT
                 """
             )
