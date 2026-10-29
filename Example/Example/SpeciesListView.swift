@@ -7,10 +7,15 @@
 
 import SwiftUI
 import SQLiteData
+import Dependencies
+import NavigationSplitStack
 
 @MainActor
 @Observable
 final class SpeciesListModel {
+    @ObservationIgnored
+    @Dependency(Router.self) private var router
+
     @ObservationIgnored
     @FetchAll var species: [Species]
 
@@ -31,12 +36,11 @@ final class SpeciesListModel {
     }
 
     func speciesTapped(_ id: Species.ID) {
-//        router.detail = [.species(id)]
+        router.detail = [.species(id)]
     }
 }
 
 struct SpeciesListView: View {
-    @Environment(Router.self) private var router
     @State private var model: SpeciesListModel
 
     init(taxonID: Taxon.ID) {
@@ -53,7 +57,6 @@ struct SpeciesListView: View {
             } else {
                 List(model.species) { species in
                     Button {
-//                        router.detail = [.species(species.id)]
                         model.speciesTapped(species.id)
                     } label: {
                         HStack {
