@@ -157,6 +157,9 @@ final class MinimalUITests: XCTestCase {
         app.buttons["detailGoToRootSidebar"].tap()
         assertSidebar(0, path: "|1→2", in: app)
         assertDetail(2, path: "|1→2", in: app)
+        app.buttons["sidebarPushNextDetail"].tap()
+        assertSidebar(0, path: "|1→2→3", in: app)
+        assertDetail(3, path: "|1→2→3", in: app)
     }
 
     @MainActor

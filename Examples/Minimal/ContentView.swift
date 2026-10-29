@@ -41,6 +41,13 @@ struct ContentView: View {
                     router.detail = [1]
                 }
                 .accessibilityIdentifier("sidebarGoToDetail")
+                if let detail = router.detail.first {
+                    let nextDetail = detail + 1
+                    Button("Push Detail \(nextDetail)") {
+                        router.detail.append(nextDetail)
+                    }
+                    .accessibilityIdentifier("sidebarPushNextDetail")
+                }
                 if router.sidebar.count > 0 {
                     Button("Previous Sidebar") {
                         router.sidebar.removeLast()
