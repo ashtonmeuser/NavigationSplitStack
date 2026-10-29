@@ -164,6 +164,7 @@ struct SpeciesView: View {
                             }
                         }
                     }
+                    .frame(maxWidth: .infinity)
                     .padding()
                 }
             }
