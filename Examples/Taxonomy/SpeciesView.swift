@@ -114,6 +114,13 @@ final class SpeciesModel {
 
 struct SpeciesView: View {
     @State private var model: SpeciesModel
+    private var toolbarPlacement: ToolbarItemPlacement {
+        #if os(macOS)
+            return .automatic
+        #elseif os(iOS)
+            return .topBarTrailing
+        #endif
+    }
 
     init(speciesID: Taxon.ID) {
         _model = State(initialValue: SpeciesModel(speciesID: speciesID))
@@ -163,7 +170,7 @@ struct SpeciesView: View {
         }
         .navigationTitle(model.species?.name ?? "Species")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: toolbarPlacement) {
                 Menu {
                     Button {
                         model.goHome()
