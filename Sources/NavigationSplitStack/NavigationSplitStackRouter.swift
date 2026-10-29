@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Dependencies
 
 // TODO: Documentation
 @MainActor @Observable
@@ -63,7 +64,7 @@ public final class NavigationSplitStackRouter<
         }
     }
 
-    public init() {}
+    public nonisolated init() {}
 
     /// Shows the sidebar without changing its navigation path.
     /// Clears the detail path in compact layouts and preserves it in expanded layouts.
@@ -86,4 +87,19 @@ public final class NavigationSplitStackRouter<
             preferredCompactColumn = .detail
         }
     }
+}
+
+extension NavigationSplitStackRouter: nonisolated DependencyKey {
+    public typealias Value = NavigationSplitStackRouter<Sidebar, Detail>
+
+    /// Live models must capture the router supplied by their navigation container.
+    public nonisolated static var liveValue: Value {
+        preconditionFailure("""
+            NavigationSplitStackRouter dependency is only available within NavigationSplitStack sidebar and detail views.
+            Alternatively, inject the router using withDependencies.
+            """)
+    }
+
+    public nonisolated static var previewValue: Value { Value() }
+    public nonisolated static var testValue: Value { Value() }
 }

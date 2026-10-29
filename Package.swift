@@ -16,11 +16,17 @@ let package = Package(
             targets: ["NavigationSplitStack"]
         ),
     ],
+    dependencies: [
+        .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.17.1"),
+    ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "NavigationSplitStack",
+            dependencies: [
+                .product(name: "Dependencies", package: "swift-dependencies"),
+            ],
             swiftSettings: [
                 .enableUpcomingFeature("ApproachableConcurrency"),
             ],
