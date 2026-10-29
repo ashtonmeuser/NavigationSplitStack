@@ -41,7 +41,7 @@ struct ContentView: View {
                     router.detail = [1]
                 }
                 .accessibilityIdentifier("sidebarGoToDetail")
-                if let detail = router.detail.first {
+                if let detail = router.detail.last {
                     let nextDetail = detail + 1
                     Button("Push Detail \(nextDetail)") {
                         router.detail.append(nextDetail)
