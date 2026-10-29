@@ -89,6 +89,6 @@ struct TaxonListView: View {
     }
 }
 
-//#Preview {
-//    TaxonListView()
-//}
+#Preview(traits: .dependencies { try! $0.bootstrapDatabase() }) {
+    TaxonListView()
+}

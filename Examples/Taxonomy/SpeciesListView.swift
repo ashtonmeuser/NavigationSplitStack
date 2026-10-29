@@ -86,6 +86,6 @@ struct SpeciesListView: View {
     }
 }
 
-//#Preview {
-//    SpeciesListView()
-//}
+#Preview(traits: .dependencies { try! $0.bootstrapDatabase() }) {
+    SpeciesListView(taxonID: 13)
+}

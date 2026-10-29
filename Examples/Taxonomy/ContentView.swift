@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Dependencies
 import NavigationSplitStack
 
 enum SidebarDestination: nonisolated Hashable, Sendable {
@@ -35,4 +36,8 @@ struct ContentView: View {
             }
         }
     }
+}
+
+#Preview(traits: .dependencies { try! $0.bootstrapDatabase() }) {
+    ContentView()
 }
