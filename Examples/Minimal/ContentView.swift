@@ -10,6 +10,10 @@ import NavigationSplitStack
 
 typealias Router = NavigationSplitStackRouter<Int, Int>
 
+extension Router {
+    var fullPath: String { "\(sidebar.map { String($0) }.joined(separator: "→")) | \(detail.map { String($0) }.joined(separator: "→"))" }
+}
+
 struct ContentView: View {
     @State var router = NavigationSplitStackRouter<Int, Int>()
 
@@ -18,9 +22,20 @@ struct ContentView: View {
             VStack {
                 let nextSidebar = router.sidebar.count + 1
 
-                Text("Sidebar \(level ?? 0)")
-                    .font(.headline)
-                NavigationLink("Go to Sidebar \(nextSidebar)", value: nextSidebar)
+                VStack {
+                    Text("Sidebar \(level ?? 0)")
+                        .font(.headline)
+                        .accessibilityIdentifier("sidebarTitle")
+                    Text(router.fullPath)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("sidebarFullPath")
+                }
+                .padding(.bottom)
+                NavigationLink("Navigate to Sidebar \(nextSidebar)", value: nextSidebar)
+                Button("Go to Sidebar \(nextSidebar)") {
+                    router.sidebar.append(nextSidebar)
+                }
                 Button("Go to Detail 1") {
                     router.detail = [1]
                 }
@@ -41,13 +56,34 @@ struct ContentView: View {
         } detail: { level in
             VStack {
                 let nextDetail = level + 1
+                let replacementDetail = router.detail.first == 1 ? 2 : 1
                 let nextSidebar = router.sidebar.count + 1
 
-                Text("Detail \(level)")
-                    .font(.headline)
-                NavigationLink("Go to Detail \(nextDetail)", value: nextDetail)
+                VStack {
+                    Text("Detail \(level)")
+                        .font(.headline)
+                        .accessibilityIdentifier("detailTitle")
+                    Text(router.fullPath)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("detailFullPath")
+                }
+                .padding(.bottom)
+                NavigationLink("Navigate to Detail \(nextDetail)", value: nextDetail)
+                Button("Go to Detail \(nextDetail)") {
+                    router.detail.append(nextDetail)
+                }
+                Button("Replace Detail Root with Detail \(replacementDetail)") {
+                    router.detail = [replacementDetail]
+                }
+                Button("Clear Detail") {
+                    router.detail.removeAll()
+                }
                 Button("Show Sidebar") {
                     router.showSidebar()
+                }
+                Button("Show Current Sidebar") {
+                    router.sidebar = router.sidebar
                 }
                 Button("Go to Root Sidebar") {
                     router.sidebar.removeAll()
