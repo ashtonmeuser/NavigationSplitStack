@@ -33,10 +33,10 @@ struct ContentView: View {
                 }
                 .padding(.bottom)
                 NavigationLink("Navigate to Sidebar \(nextSidebar)", value: nextSidebar)
-                Button("Go to Sidebar \(nextSidebar)") {
+                Button("Push Sidebar \(nextSidebar)") {
                     router.sidebar.append(nextSidebar)
                 }
-                .accessibilityIdentifier("sidebarGoToNextSidebar")
+                .accessibilityIdentifier("sidebarPushNextSidebar")
                 Button("Go to Detail 1") {
                     router.detail = [1]
                 }
@@ -74,10 +74,10 @@ struct ContentView: View {
                 }
                 .padding(.bottom)
                 NavigationLink("Navigate to Detail \(nextDetail)", value: nextDetail)
-                Button("Go to Detail \(nextDetail)") {
+                Button("Push Detail \(nextDetail)") {
                     router.detail.append(nextDetail)
                 }
-                .accessibilityIdentifier("detailGoToNextDetail")
+                .accessibilityIdentifier("detailPushNextDetail")
                 Button("Replace Detail Root with Detail \(replacementDetail)") {
                     router.detail = [replacementDetail]
                 }
@@ -95,10 +95,10 @@ struct ContentView: View {
                     router.sidebar.removeAll()
                 }
                 .accessibilityIdentifier("detailGoToRootSidebar")
-                Button("Go to Sidebar \(nextSidebar)") {
+                Button("Push Sidebar \(nextSidebar)") {
                     router.sidebar.append(nextSidebar)
                 }
-                .accessibilityIdentifier("detailGoToNextSidebar")
+                .accessibilityIdentifier("detailPushNextSidebar")
                 if router.detail.count > 1 {
                     Button("Previous Detail") {
                         router.detail.removeLast()
