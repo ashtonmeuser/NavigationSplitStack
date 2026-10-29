@@ -36,22 +36,26 @@ struct ContentView: View {
                 Button("Go to Sidebar \(nextSidebar)") {
                     router.sidebar.append(nextSidebar)
                 }
+                .accessibilityIdentifier("sidebarGoToNextSidebar")
                 Button("Go to Detail 1") {
                     router.detail = [1]
                 }
+                .accessibilityIdentifier("sidebarGoToDetail")
                 if router.sidebar.count > 0 {
                     Button("Previous Sidebar") {
                         router.sidebar.removeLast()
                     }
                 }
                 if router.sidebar.count > 1 {
-                    Button("Root Sidebar") {
+                    Button("Go to Root Sidebar") {
                         router.sidebar.removeAll()
                     }
+                    .accessibilityIdentifier("sidebarGoToRootSidebar")
                 }
-                Button("Hide Sidebar") {
+                Button("Hide Sidebar via Router") {
                     router.hideSidebar()
                 }
+                .accessibilityIdentifier("sidebarHideSidebar")
             }
         } detail: { level in
             VStack {
@@ -73,24 +77,28 @@ struct ContentView: View {
                 Button("Go to Detail \(nextDetail)") {
                     router.detail.append(nextDetail)
                 }
+                .accessibilityIdentifier("detailGoToNextDetail")
                 Button("Replace Detail Root with Detail \(replacementDetail)") {
                     router.detail = [replacementDetail]
                 }
                 Button("Clear Detail") {
                     router.detail.removeAll()
                 }
-                Button("Show Sidebar") {
+                Button("Show Sidebar via Router") {
                     router.showSidebar()
                 }
+                .accessibilityIdentifier("detailShowSidebar")
                 Button("Show Current Sidebar") {
                     router.sidebar = router.sidebar
                 }
                 Button("Go to Root Sidebar") {
                     router.sidebar.removeAll()
                 }
+                .accessibilityIdentifier("detailGoToRootSidebar")
                 Button("Go to Sidebar \(nextSidebar)") {
                     router.sidebar.append(nextSidebar)
                 }
+                .accessibilityIdentifier("detailGoToNextSidebar")
                 if router.detail.count > 1 {
                     Button("Previous Detail") {
                         router.detail.removeLast()
