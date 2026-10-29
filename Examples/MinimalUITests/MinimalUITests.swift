@@ -15,6 +15,8 @@ final class MinimalUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    // MARK: Compact Layout
+
     @MainActor
     func testRepeatedCompactReturnHome() throws {
         try requirePhone()
@@ -94,9 +96,11 @@ final class MinimalUITests: XCTestCase {
         assertSidebar(0, path: "|", in: app)
     }
 
+    // MARK: Wide Layout
+
     @MainActor
     func testWideEmptyDetailCanHideSidebar() throws {
-        try requirePad()
+        try requireWideLayout()
         let app = launchApp()
         assertSidebar(0, path: "|", in: app)
         XCTAssertTrue(app.staticTexts["Make a selection"].waitForExistence(timeout: 5))
@@ -107,7 +111,7 @@ final class MinimalUITests: XCTestCase {
 
     @MainActor
     func testWideShowHideAndClearDetail() throws {
-        try requirePad()
+        try requireWideLayout()
         let app = launchApp()
         app.buttons["sidebarPushNextSidebar"].tap()
         assertSidebar(1, path: "1|", in: app)
@@ -132,7 +136,7 @@ final class MinimalUITests: XCTestCase {
 
     @MainActor
     func testWidePathsAndDetailRootReplacement() throws {
-        try requirePad()
+        try requireWideLayout()
         let app = launchApp()
         app.buttons["sidebarPushNextSidebar"].tap()
         assertSidebar(1, path: "1|", in: app)
@@ -164,7 +168,7 @@ final class MinimalUITests: XCTestCase {
 
     @MainActor
     func testNativeWideSidebarToggle() throws {
-        try requirePad()
+        try requireWideLayout()
         let app = launchApp()
         assertSidebar(0, path: "|", in: app)
 
@@ -222,11 +226,13 @@ final class MinimalUITests: XCTestCase {
     }
 
     @MainActor
-    private func requirePad() throws {
+    private func requireWideLayout() throws {
         #if os(iOS)
-        try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .pad, "Requires an iPad")
+        try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .pad, "Requires iPad or macOS")
+        #elseif os(macOS)
+        return
         #else
-        throw XCTSkip("Requires an iPad")
+        throw XCTSkip("Requires iPad or macOS")
         #endif
     }
 }
