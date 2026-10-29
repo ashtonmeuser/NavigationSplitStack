@@ -7,7 +7,6 @@
 
 import SwiftUI
 import SQLiteData
-import NavigationSplitStack
 
 @MainActor
 @Observable
@@ -30,6 +29,10 @@ final class SpeciesListModel {
             Taxon.where { $0.id.is(taxonID) }.select(\.name)
         )
     }
+
+    func speciesTapped(_ id: Species.ID) {
+//        router.detail = [.species(id)]
+    }
 }
 
 struct SpeciesListView: View {
@@ -50,7 +53,8 @@ struct SpeciesListView: View {
             } else {
                 List(model.species) { species in
                     Button {
-                        router.detail = [.species(species.id)]
+//                        router.detail = [.species(species.id)]
+                        model.speciesTapped(species.id)
                     } label: {
                         HStack {
                             VStack(alignment: .leading) {

@@ -8,19 +8,19 @@
 import SwiftUI
 import NavigationSplitStack
 
-enum SidebarDestination: Hashable {
+enum SidebarDestination: nonisolated Hashable, Sendable {
     case `class`(Taxon.ID)
     case family(Taxon.ID)
 }
 
-enum DetailDestination: Hashable {
+enum DetailDestination: nonisolated Hashable, Sendable {
     case species(Species.ID)
 }
 
 typealias Router = NavigationSplitStackRouter<SidebarDestination, DetailDestination>
 
 struct ContentView: View {
-    @State var router = Router()
+    @State private var router = Router()
 
     var body: some View {
         NavigationSplitStack(router: router) { sidebarDestination in
