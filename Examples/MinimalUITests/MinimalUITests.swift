@@ -32,6 +32,19 @@ final class MinimalUITests: XCTestCase {
     }
 
     @MainActor
+    func testSidebarNavigationLinkWorksAfterReturningToRoot() {
+        let app = launchApp()
+        assertSidebar(0, path: "|", in: app)
+
+        app.buttons["Navigate to Sidebar 1"].activate()
+        assertSidebar(1, path: "1|", in: app)
+        app.buttons["Previous Sidebar"].activate()
+        assertSidebar(0, path: "|", in: app)
+        app.buttons["Navigate to Sidebar 1"].activate()
+        assertSidebar(1, path: "1|", in: app)
+    }
+
+    @MainActor
     func testDetailPushPopAndRootReplacement() {
         let app = launchApp()
         app.buttons["sidebarGoToDetail"].activate()
