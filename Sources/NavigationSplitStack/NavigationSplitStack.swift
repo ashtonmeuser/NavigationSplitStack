@@ -79,8 +79,9 @@ public struct NavigationSplitStack<
                 )
             ) {
                 makeSidebar(nil)
-                    .navigationDestination(for: Sidebar.self) {
-                        makeSidebar($0)
+                    .navigationDestination(for: Sidebar.self) { sidebar in
+                        makeSidebar(sidebar)
+                            .id(sidebar)
                             #if os(macOS)
                                 .toolbar {
                                     ToolbarItem(placement: .automatic) {
@@ -106,11 +107,10 @@ public struct NavigationSplitStack<
                 if let detail = router.detail.first {
                     NavigationStack(path: $router.detailRest) {
                         makeDetail(detail)
-                            // A new root destination needs fresh view state.
-                            // Because it is not represented in the navigation path, an explicit ID is provided.
                             .id(detail)
-                            .navigationDestination(for: Detail.self) {
-                                makeDetail($0)
+                            .navigationDestination(for: Detail.self) { detail in
+                                makeDetail(detail)
+                                    .id(detail)
                             }
                     }
                 } else {
