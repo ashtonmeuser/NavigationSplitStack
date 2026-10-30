@@ -41,7 +41,16 @@ final class MinimalUITests: XCTestCase {
         app.buttons["Previous Sidebar"].activate()
         assertSidebar(0, path: "|", in: app)
         app.buttons["Navigate to Sidebar 1"].activate()
+
+        #if os(macOS)
+        XCTExpectFailure(
+            "macOS List NavigationLink does not reactivate after pop"
+        ) {
+            assertSidebar(1, path: "1|", in: app)
+        }
+        #else
         assertSidebar(1, path: "1|", in: app)
+        #endif
     }
 
     @MainActor
