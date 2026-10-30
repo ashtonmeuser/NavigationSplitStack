@@ -15,7 +15,7 @@ jobs:
     runs-on: xcode-27
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Test package
         run: swift test
 
@@ -40,7 +40,7 @@ jobs:
           - name: macOS 27
             destination: 'platform=macOS'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install iOS ${{ matrix.install_runtime }} simulator
         id: simulator
         if: matrix.install_runtime
@@ -66,7 +66,7 @@ jobs:
             DEVELOPMENT_TEAM=""
       - name: Upload failed test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: minimal-ui-tests-${{ matrix.name }}
           path: ${{ runner.temp }}/Minimal.xcresult
