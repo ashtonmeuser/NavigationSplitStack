@@ -8,6 +8,25 @@
 import Dependencies
 import SwiftUI
 
+/// A two-column navigation view with independent sidebar and detail stacks.
+///
+/// Supply a ``NavigationSplitStackRouter`` and view builders for each column.
+/// The sidebar builder receives `nil` for its root and a value for each pushed
+/// destination. The detail builder receives the first value in the router's
+/// detail path for its root and each subsequent value for a pushed destination.
+/// An empty detail path displays a placeholder instead of a detail stack.
+///
+/// In compact layouts, selecting the first detail destination presents the detail
+/// column. Returning from its root to the sidebar clears the detail path. In
+/// expanded layouts, both stacks can remain visible and keep independent paths.
+///
+/// Keep the router in persistent storage, such as a parent view's `@State`, and
+/// use one router per split-view instance. This view exposes the supplied router
+/// to its descendants through SwiftUI's environment; descendants can retrieve it
+/// with `@Environment(NavigationSplitStackRouter<Sidebar, Detail>.self)`.
+///
+/// The `Sidebar` and `Detail` types describe destinations in their respective
+/// paths. The `SidebarView` and `DetailView` types are inferred from the builders.
 public struct NavigationSplitStack<
     Sidebar: Hashable,
     Detail: Hashable,
@@ -20,6 +39,19 @@ public struct NavigationSplitStack<
     private let emptyText: LocalizedStringKey?
     @Bindable private var router: NavigationSplitStackRouter<Sidebar, Detail>
 
+    /// Creates a split view driven by the supplied router.
+    ///
+    /// The caller manages the router's lifetime. Supplying a different router
+    /// switches this view to that instance's navigation state.
+    ///
+    /// - Parameters:
+    ///   - router: The shared navigation state for this split view.
+    ///   - emptyText: The localized placeholder text for an empty detail path.
+    ///     Passing `nil` uses "Make a selection".
+    ///   - sidebar: Builds the sidebar root when its argument is `nil`, or a
+    ///     pushed sidebar destination when its argument contains a value.
+    ///   - detail: Builds a detail destination. The first path element supplies
+    ///     the root; subsequent elements are pushed above it.
     public init(
         router: NavigationSplitStackRouter<Sidebar, Detail>,
         emptyText: LocalizedStringKey? = nil,
@@ -32,6 +64,7 @@ public struct NavigationSplitStack<
         self.emptyText = emptyText
     }
 
+    /// The split view, its navigation stacks, and the shared router environment.
     public var body: some View {
         NavigationSplitView(
             columnVisibility: $router.columnVisibility,
