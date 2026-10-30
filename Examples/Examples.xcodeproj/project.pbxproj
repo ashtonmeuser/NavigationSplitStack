@@ -29,6 +29,16 @@
 		C036ABC1308C1D4800683801 /* Taxonomy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Taxonomy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C08469FF30955FDD004F1A92 /* Exceptions for "Shared" folder in "Taxonomy" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Extensions.swift,
+			);
+			target = C036ABC0308C1D4800683801 /* Taxonomy */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C028EF163093BC4D00D9282E /* Minimal */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -43,6 +53,14 @@
 		C036ABC3308C1D4800683801 /* Taxonomy */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Taxonomy;
+			sourceTree = "<group>";
+		};
+		C08469FA30955F74004F1A92 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C08469FF30955FDD004F1A92 /* Exceptions for "Shared" folder in "Taxonomy" target */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -73,6 +91,7 @@
 		C036ABB8308C1D4800683801 = {
 			isa = PBXGroup;
 			children = (
+				C08469FA30955F74004F1A92 /* Shared */,
 				C036ABC3308C1D4800683801 /* Taxonomy */,
 				C028EF163093BC4D00D9282E /* Minimal */,
 				C028EF2E3093BC4E00D9282E /* MinimalUITests */,
@@ -113,6 +132,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				C028EF163093BC4D00D9282E /* Minimal */,
+				C08469FA30955F74004F1A92 /* Shared */,
 			);
 			name = Minimal;
 			packageProductDependencies = (

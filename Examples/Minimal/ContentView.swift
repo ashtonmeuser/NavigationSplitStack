@@ -10,12 +10,6 @@ import SwiftUI
 
 typealias Router = NavigationSplitStackRouter<Int, Int>
 
-extension Router {
-    var fullPath: String {
-        "\(sidebar.map { String($0) }.joined(separator: "→")) | \(detail.map { String($0) }.joined(separator: "→"))"
-    }
-}
-
 struct ContentView: View {
     @State var router = NavigationSplitStackRouter<Int, Int>()
 
@@ -119,7 +113,7 @@ struct ContentView: View {
     }
 }
 
-struct TitleChip: View {
+private struct TitleChip: View {
     // Note that router is available to NavigationSplitStack descendant views via @Environment
     @Environment(Router.self) private var router
     let title: String
