@@ -14,8 +14,7 @@ import SwiftUI
 final class SpeciesModel {
     private enum Family: AliasName {}
 
-    @ObservationIgnored
-    @Dependency(Router.self) private var router
+    private let router: Router
 
     @ObservationIgnored
     @FetchOne var species: Species?
@@ -29,7 +28,8 @@ final class SpeciesModel {
     @ObservationIgnored
     @FetchAll var sameFamilySpecies: [Species]
 
-    init(speciesID: Species.ID) {
+    init(speciesID: Species.ID, router: Router) {
+        self.router = router
         _species = FetchOne(
             Species.where { $0.id.is(speciesID) }
         )
@@ -122,8 +122,10 @@ struct SpeciesView: View {
         #endif
     }
 
-    init(speciesID: Taxon.ID) {
-        _model = State(initialValue: SpeciesModel(speciesID: speciesID))
+    init(speciesID: Species.ID, router: Router) {
+        _model = State(
+            initialValue: SpeciesModel(speciesID: speciesID, router: router)
+        )
     }
 
     var body: some View {
@@ -226,5 +228,5 @@ struct SpeciesView: View {
 }
 
 #Preview(traits: .dependencies { try! $0.bootstrapDatabase() }) {
-    SpeciesView(speciesID: 5)
+    SpeciesView(speciesID: 5, router: Router())
 }
