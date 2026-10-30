@@ -34,7 +34,7 @@ extension DependencyValues {
                 """
                 CREATE TABLE "species" (
                     "id" INTEGER PRIMARY KEY NOT NULL,
-                    "taxonID" INTEGER REFERENCES "taxa"("id") ON DELETE CASCADE,
+                    "taxonID" INTEGER NOT NULL REFERENCES "taxa"("id") ON DELETE CASCADE,
                     "name" TEXT NOT NULL,
                     "scientificName" TEXT,
                     "icon" TEXT,
