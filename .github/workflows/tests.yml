@@ -1,0 +1,72 @@
+name: Tests
+
+on:
+  push:
+
+permissions:
+  contents: read
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+
+jobs:
+  unit-tests:
+    name: Package unit tests
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test package
+        run: swift test
+
+  ui-tests:
+    name: UI tests (${{ matrix.name }})
+    runs-on: xcode-27
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: iPhone iOS 26.5
+            install_runtime: '26.5'
+            device: iPhone 17
+          - name: iPhone iOS 27
+            destination: 'platform=iOS Simulator,name=iPhone 17,OS=27.0'
+          - name: iPad iOS 26.5
+            install_runtime: '26.5'
+            device: iPad Air 11-inch (M4)
+          - name: iPad iOS 27
+            destination: 'platform=iOS Simulator,name=iPad Air 11-inch (M4),OS=27.0'
+          - name: macOS 27
+            destination: 'platform=macOS'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install iOS ${{ matrix.install_runtime }} simulator
+        id: simulator
+        if: matrix.install_runtime
+        env:
+          IOS_VERSION: ${{ matrix.install_runtime }}
+          DEVICE: ${{ matrix.device }}
+        run: |
+          xcodebuild -downloadPlatform iOS -buildVersion "$IOS_VERSION" -architectureVariant arm64
+          simulator_id=$(xcrun simctl create "CI iOS $IOS_VERSION" "$DEVICE" "iOS$IOS_VERSION")
+          printf 'destination=platform=iOS Simulator,id=%s\n' "$simulator_id" >> "$GITHUB_OUTPUT"
+      - name: Test Minimal on ${{ matrix.name }}
+        env:
+          DESTINATION: ${{ steps.simulator.outputs.destination || matrix.destination }}
+        run: |
+          xcodebuild test \
+            -project Examples/Examples.xcodeproj \
+            -scheme Minimal \
+            -destination "$DESTINATION" \
+            -parallel-testing-enabled NO \
+            -resultBundlePath "$RUNNER_TEMP/Minimal.xcresult" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="-" \
+            DEVELOPMENT_TEAM=""
+      - name: Upload failed test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minimal-ui-tests-${{ matrix.name }}
+          path: ${{ runner.temp }}/Minimal.xcresult
