@@ -5,6 +5,7 @@
 //  Created by Ashton Meuser on 2026-10-28.
 //
 
+import NavigationSplitStack
 import SQLiteData
 import SwiftUI
 
@@ -70,7 +71,7 @@ struct TaxonListView: View {
             let destination: SidebarDestination =
                 taxon.parentID == nil ? .class(taxon.id) : .family(taxon.id)
 
-            NavigationLink(value: destination) {
+            NavigationLinkWrapper(value: destination) {
                 HStack {
                     VStack(alignment: .leading) {
                         Text(taxon.name)
@@ -90,6 +91,27 @@ struct TaxonListView: View {
             }
         }
         .navigationTitle(model.taxonName)
+    }
+}
+
+// See https://github.com/ashtonmeuser/NavigationSplitStack/issues/1
+private struct NavigationLinkWrapper<Content: View>: View {
+    @Environment(Router.self) private var router
+    let value: SidebarDestination
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        #if os(macOS)
+            Button {
+                router.sidebar.append(value)
+            } label: {
+                content
+            }
+        #else
+            NavigationLink(value: value) {
+                content
+            }
+        #endif
     }
 }
 
