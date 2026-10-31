@@ -61,7 +61,7 @@ struct TaxonListView: View {
     @State private var model: TaxonListModel
 
     init(parentID: Taxon.ID? = nil) {
-        _model = State(initialValue: TaxonListModel(parentID: parentID))
+        model = TaxonListModel(parentID: parentID)
     }
 
     var body: some View {

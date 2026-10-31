@@ -5,7 +5,6 @@
 //  Created by Ashton Meuser on 2026-10-28.
 //
 
-import Dependencies
 import NavigationSplitStack
 import SQLiteData
 import SwiftUI
@@ -13,16 +12,13 @@ import SwiftUI
 @MainActor
 @Observable
 final class SpeciesListModel {
-    private let router: Router
-
     @ObservationIgnored
     @FetchAll var species: [Species]
 
     @ObservationIgnored
     @FetchOne var familyName: String
 
-    init(taxonID: Taxon.ID, router: Router) {
-        self.router = router
+    init(taxonID: Taxon.ID) {
         _species = FetchAll(
             Species
                 .where { $0.taxonID.is(taxonID) }
@@ -34,19 +30,14 @@ final class SpeciesListModel {
             Taxon.where { $0.id.is(taxonID) }.select(\.name)
         )
     }
-
-    func speciesTapped(_ id: Species.ID) {
-        router.detail = [.species(id)]
-    }
 }
 
 struct SpeciesListView: View {
+    @Environment(Router.self) private var router
     @State private var model: SpeciesListModel
 
-    init(taxonID: Taxon.ID, router: Router) {
-        _model = State(
-            initialValue: SpeciesListModel(taxonID: taxonID, router: router)
-        )
+    init(taxonID: Taxon.ID) {
+        model = SpeciesListModel(taxonID: taxonID)
     }
 
     var body: some View {
@@ -59,7 +50,7 @@ struct SpeciesListView: View {
             } else {
                 List(model.species) { species in
                     Button {
-                        model.speciesTapped(species.id)
+                        router.detail = [.species(species.id)]
                     } label: {
                         HStack {
                             VStack(alignment: .leading) {
@@ -89,5 +80,5 @@ struct SpeciesListView: View {
 }
 
 #Preview(traits: .dependencies { try! $0.bootstrapDatabase() }) {
-    SpeciesListView(taxonID: 13, router: Router())
+    SpeciesListView(taxonID: 13)
 }

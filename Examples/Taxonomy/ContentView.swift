@@ -30,11 +30,11 @@ struct ContentView: View {
             switch sidebarDestination {
             case .none: TaxonListView()
             case .class(let id): TaxonListView(parentID: id)
-            case .family(let id): SpeciesListView(taxonID: id, router: router)
+            case .family(let id): SpeciesListView(taxonID: id)
             }
         } detail: { detailDestination in
             switch detailDestination {
-            case .species(let id): SpeciesView(speciesID: id, router: router)
+            case .species(let id): SpeciesView(speciesID: id)
             }
         }
     }

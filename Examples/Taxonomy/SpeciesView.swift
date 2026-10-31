@@ -14,8 +14,6 @@ import SwiftUI
 final class SpeciesModel {
     private enum Family: AliasName {}
 
-    private let router: Router
-
     @ObservationIgnored
     @FetchOne var species: Species?
 
@@ -28,8 +26,7 @@ final class SpeciesModel {
     @ObservationIgnored
     @FetchAll var sameFamilySpecies: [Species]
 
-    init(speciesID: Species.ID, router: Router) {
-        self.router = router
+    init(speciesID: Species.ID) {
         _species = FetchOne(
             Species.where { $0.id.is(speciesID) }
         )
@@ -61,37 +58,10 @@ final class SpeciesModel {
         )
     }
 
-    func pushSpecies(_ species: Species) {
-        router.detail.append(.species(species.id))
-    }
-
-    var detailDepth: Int { router.detail.count }
-
-    func goHome() {
-        router.sidebar = []
-    }
-
-    func showSidebar(_ show: Bool) {
-        if show { router.showSidebar() } else { router.hideSidebar() }
-    }
-
-    func goToRootDetail() {
-        router.detail.removeLast(router.detail.count - 1)
-    }
-
-    func goToPreviousDetail() {
-        router.detail.removeLast()
-    }
-
-    var alertMessage: String?
-
-    func showFullPath() {
-        let message = """
-            Sidebar: \(router.sidebar.map { String(describing: $0) }.joined(separator: " → "))
-            Detail: \(router.detail.map { String(describing: $0) }.joined(separator: " → "))
-            """
-        alertMessage = message
-        print(message)
+    var alertMessage: String? {
+        didSet {
+            if let message = alertMessage { print(message) }
+        }
     }
 
     var markdown: AttributedString? {
@@ -104,15 +74,15 @@ final class SpeciesModel {
         )
     }
 
-    func openURL(_ url: URL) -> OpenURLAction.Result {
+    func openURL(_ url: URL) -> [SidebarDestination]? {
         let ids = url.path.split(separator: "/").compactMap { Taxon.ID($0) }
-        guard (1...2).contains(ids.count) else { return .discarded }
-        router.sidebar = [.class(ids[0])] + ids.dropFirst().map { .family($0) }
-        return .handled
+        guard (1...2).contains(ids.count) else { return nil }
+        return [.class(ids[0])] + ids.dropFirst().map { .family($0) }
     }
 }
 
 struct SpeciesView: View {
+    @Environment(Router.self) private var router
     @State private var model: SpeciesModel
     private var toolbarPlacement: ToolbarItemPlacement {
         #if os(macOS)
@@ -122,10 +92,8 @@ struct SpeciesView: View {
         #endif
     }
 
-    init(speciesID: Species.ID, router: Router) {
-        _model = State(
-            initialValue: SpeciesModel(speciesID: speciesID, router: router)
-        )
+    init(speciesID: Species.ID) {
+        model = SpeciesModel(speciesID: speciesID)
     }
 
     var body: some View {
@@ -151,7 +119,13 @@ struct SpeciesView: View {
                             Text(markdown)
                                 .environment(
                                     \.openURL,
-                                    OpenURLAction { model.openURL($0) }
+                                    OpenURLAction {
+                                        if let route = model.openURL($0) {
+                                            router.sidebar = route
+                                            return .handled
+                                        }
+                                        return .discarded
+                                    }
                                 )
                         }
                         if !model.sameFamilySpecies.isEmpty {
@@ -159,7 +133,9 @@ struct SpeciesView: View {
                                 Text("Species in the same family")
                                 ForEach(model.sameFamilySpecies) { species in
                                     Button(species.name) {
-                                        model.pushSpecies(species)
+                                        router.detail.append(
+                                            .species(species.id)
+                                        )
                                     }
                                     .fontWeight(.bold)
                                 }
@@ -176,30 +152,30 @@ struct SpeciesView: View {
             ToolbarItem(placement: toolbarPlacement) {
                 Menu {
                     Button {
-                        model.goHome()
+                        router.sidebar = []
                     } label: {
                         Label("Go Home", systemImage: "house")
                     }
                     Button {
-                        model.showSidebar(true)
+                        router.showSidebar()
                     } label: {
                         Label("Show Sidebar", systemImage: "eye")
                     }
                     Button {
-                        model.showSidebar(false)
+                        router.hideSidebar()
                     } label: {
                         Label("Hide Sidebar", systemImage: "eye.slash")
                     }
-                    if model.detailDepth > 1 {
+                    if router.detail.count > 1 {
                         Button {
-                            model.goToPreviousDetail()
+                            router.detail.removeLast()
                         } label: {
                             Label("Previous Species", systemImage: "arrow.left")
                         }
                     }
-                    if model.detailDepth > 2 {
+                    if router.detail.count > 2 {
                         Button {
-                            model.goToRootDetail()
+                            router.detail.keepFirst(1)
                         } label: {
                             Label(
                                 "Root Species",
@@ -209,7 +185,7 @@ struct SpeciesView: View {
                     }
                     Section("Debug") {
                         Button {
-                            model.showFullPath()
+                            model.alertMessage = router.fullPath
                         } label: {
                             Label("Show Full Path", systemImage: "house")
                         }
@@ -228,5 +204,5 @@ struct SpeciesView: View {
 }
 
 #Preview(traits: .dependencies { try! $0.bootstrapDatabase() }) {
-    SpeciesView(speciesID: 5, router: Router())
+    SpeciesView(speciesID: 5)
 }
