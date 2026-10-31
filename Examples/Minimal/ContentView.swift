@@ -57,6 +57,10 @@ struct ContentView: View {
                     .accessibilityIdentifier("sidebarHideSidebar")
                 }
             }
+            .navigationTitle(title)
+            #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+            #endif
         } detail: { level in
             let title = "Detail \(level)"
             let nextDetail = level + 1
@@ -109,6 +113,10 @@ struct ContentView: View {
                     }
                 }
             }
+            .navigationTitle(title)
+            #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+            #endif
         }
     }
 }
@@ -130,10 +138,6 @@ private struct TitleChip: View {
                 .accessibilityIdentifier("\(prefix)FullPath")
         }
         .frame(maxWidth: .infinity)
-        .navigationTitle(title)
-        #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-        #endif
     }
 }
 
