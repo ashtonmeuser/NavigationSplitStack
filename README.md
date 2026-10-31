@@ -65,3 +65,10 @@ router.hideSidebar()             // Focus on detail in a wide layout.
 
 See the [DocC guide](Sources/NavigationSplitStack/NavigationSplitStack.docc/NavigationSplitStack.md) for more on routing and column presentation.
 Explore the [example apps](Examples/) for working implementations.
+
+## Caveats
+
+- `NavigationLink` pushes only within the column containing it: a sidebar link pushes a sidebar destination, and a detail link pushes a detail destination. Change the router path to navigate between columns.
+- Use a value-based `NavigationLink`, such as `NavigationLink("Archive", value: "Archive")`, with the destination type for that column. A link that constructs its destination view directly does not update the router path.
+- The first detail destination must be set with `router.detail = [destination]`. The detail `NavigationStack` is absent while `router.detail` is empty, so a sidebar link cannot open the detail root.
+- On macOS, a sidebar `NavigationLink` inside a `List` can remain active after navigating back, preventing the same row from opening again. See [issue #1](https://github.com/ashtonmeuser/NavigationSplitStack/issues/1). Use a `Button` that updates `router.sidebar` for affected rows.

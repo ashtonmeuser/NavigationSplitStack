@@ -93,6 +93,10 @@ environment when they need to navigate programmatically.
 
 ## Topics
 
+### Guides
+
+- <doc:Caveats>
+
 ### Creating a split navigation interface
 
 - ``/NavigationSplitStack/NavigationSplitStack``
