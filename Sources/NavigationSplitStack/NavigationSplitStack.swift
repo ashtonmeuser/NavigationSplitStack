@@ -5,7 +5,6 @@
 //  Created by Ashton Meuser on 2026-10-23.
 //
 
-import Dependencies
 import SwiftUI
 
 /// A two-column navigation view with independent sidebar and detail stacks.
@@ -78,9 +77,9 @@ public struct NavigationSplitStack<
                     set: { router.sidebar = $0 }
                 )
             ) {
-                makeSidebar(nil)
+                sidebarView(nil)
                     .navigationDestination(for: Sidebar.self) { sidebar in
-                        makeSidebar(sidebar)
+                        sidebarView(sidebar)
                             .id(sidebar)
                             #if os(macOS)
                                 .toolbar {
@@ -106,10 +105,10 @@ public struct NavigationSplitStack<
                 // Otherwise, the navigation pop animation responds to the nil selection i.e. detail view is set to content unavailable during pop animation.
                 if let detail = router.detail.first {
                     NavigationStack(path: $router.detailRest) {
-                        makeDetail(detail)
+                        detailView(detail)
                             .id(detail)
                             .navigationDestination(for: Detail.self) { detail in
-                                makeDetail(detail)
+                                detailView(detail)
                                     .id(detail)
                             }
                     }
@@ -128,24 +127,6 @@ public struct NavigationSplitStack<
         }
         .onChange(of: ObjectIdentifier(router)) {
             router.horizontalSizeClass = horizontalSizeClass
-        }
-    }
-
-    // Scope each factory invocation so models initialized by it capture this container's router.
-    // This scope does not extend to descendants constructed later during SwiftUI rendering.
-    private func makeSidebar(_ destination: Sidebar?) -> SidebarView {
-        withDependencies {
-            $0[NavigationSplitStackRouter<Sidebar, Detail>.self] = router
-        } operation: {
-            sidebarView(destination)
-        }
-    }
-
-    private func makeDetail(_ destination: Detail) -> DetailView {
-        withDependencies {
-            $0[NavigationSplitStackRouter<Sidebar, Detail>.self] = router
-        } operation: {
-            detailView(destination)
         }
     }
 }

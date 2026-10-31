@@ -5,7 +5,6 @@
 //  Created by Ashton Meuser on 2026-10-23.
 //
 
-import Dependencies
 import SwiftUI
 
 /// Observable navigation state for a sidebar stack and a detail stack.
@@ -142,21 +141,4 @@ public final class NavigationSplitStackRouter<
             preferredCompactColumn = .detail
         }
     }
-}
-
-extension NavigationSplitStackRouter: nonisolated DependencyKey {
-    public typealias Value = NavigationSplitStackRouter<Sidebar, Detail>
-
-    /// Live models must capture the router supplied by their navigation container.
-    public nonisolated static var liveValue: Value {
-        preconditionFailure(
-            """
-            NavigationSplitStackRouter dependency is only available within NavigationSplitStack sidebar and detail views.
-            Alternatively, inject the router using withDependencies.
-            """
-        )
-    }
-
-    public nonisolated static var previewValue: Value { Value() }
-    public nonisolated static var testValue: Value { Value() }
 }
