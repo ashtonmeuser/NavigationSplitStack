@@ -101,6 +101,32 @@ so spaces and shell metacharacters remain literal.
 
 ## Validation
 
+### Manual GitHub run
+
+This repository includes a [manual test workflow](../../workflows/test-xcode-action.yml)
+with fields for all four action inputs. It uses the same `xcode-27` runner and
+Xcode installation as the repository's existing CI.
+
+GitHub requires the wrapper workflow to exist on the default branch to expose
+the **Run workflow** button. Put the wrapper on the default branch and the branch
+being tested; the action implementation can remain on the test branch.
+
+1. Push the test branch with the action and wrapper workflow.
+2. Open **Actions → Test Xcode action → Run workflow**.
+3. Select the test branch in **Use workflow from**.
+4. Enter `device`, optionally `os`, and the scheme/project. Defaults use
+   `iPhone`, the newest compatible installed OS, `Minimal`, and
+   `Examples/Examples.xcodeproj`. Clear `project` to test project auto-discovery.
+5. Select **Run workflow** and inspect the **Run local Xcode action** step.
+
+Checkout uses the selected branch, so the local action runs that branch's code.
+For example, try `device: iPhone` with `os: '27'`, leave `os` empty to test
+automatic selection, or use `device: macOS` to test the host destination.
+
+See [GitHub's manual workflow documentation](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow).
+
+### Local checks
+
 ```sh
 python3 -m unittest discover -s .github/actions/xcode-test/tests -v
 ```
