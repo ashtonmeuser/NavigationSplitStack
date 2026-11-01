@@ -1,6 +1,6 @@
 # Xcode tests
 
-A standalone composite action with six inputs. Device and scheme are required;
+A standalone composite action with seven inputs. Device and scheme are required;
 OS version and project are optional. OS version is ignored for macOS.
 Local ad-hoc signing is enabled by default and can be disabled.
 Test parallelization follows the scheme by default and can be disabled.
@@ -32,6 +32,7 @@ omitting `project` leaves project/workspace discovery to `xcodebuild`.
 | `project` | No | `.xcodeproj` path relative to the working directory. |
 | `ad-hoc-signing` | No | `true` (default) adds local ad-hoc signing overrides; `false` preserves project signing settings. |
 | `disableParallelization` | No | `false` (default) uses the scheme setting; `true` passes `-parallel-testing-enabled NO`. |
+| `cache` | No | `true` (default) caches Swift package checkouts; `false` disables caching. |
 
 `iPhone` and `iphone` both match `iPhone 17` and `iPhone 18 Pro Max`. `iPad Pro` matches
 `iPad Pro 13-inch (M5)`; use `iPad` to also match `iPad Air 11-inch (M4)`.
@@ -124,6 +125,24 @@ Prebooting removes simulator startup from the test-launch path, but does not
 guarantee that application launches cannot time out. Tests still install and
 launch the app normally.
 
+## Swift package cache
+
+By default the action directs Xcode's Swift package checkouts into a directory
+under `RUNNER_TEMP` and caches it using `actions/cache`. The cache key includes
+the runner OS and architecture, the selected Xcode version and build, and a
+hash of `Package.resolved`, `Package.swift`, and `project.pbxproj` files in the checked-out
+repository. No cache key input is required. Dependency resolution still runs;
+Xcode checks and updates the restored checkouts as needed.
+
+Set `cache: 'false'` to skip GitHub cache restore/save. Xcode still uses the
+same checkout directory under `RUNNER_TEMP` during the job.
+The cache covers package sources and artifacts in the checkout directory, not
+DerivedData build products or simulator runtimes. It saves after successful jobs;
+a failure before job completion does not populate a new cache. Cache scope,
+storage limits, and eviction follow [GitHub's cache rules](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching).
+If no package manifests, lockfiles, or Xcode project files are present, the file component of
+the key is empty; Xcode is responsible for validating the restored checkouts.
+
 ## Signing and test results
 
 By default, `ad-hoc-signing: 'true'` adds these build settings to the test command:
@@ -174,7 +193,7 @@ Bundles remain on disk after the action; uploading is not part of the composite.
 ### Manual GitHub run
 
 This repository includes a [manual test workflow](../../workflows/test-xcode-action.yml)
-with fields for all six action inputs. It uses the `xcode-27` runner and its
+with fields for all seven action inputs. It uses the `xcode-27` runner and its
 default Xcode selection.
 
 GitHub requires the wrapper workflow to exist on the default branch to expose

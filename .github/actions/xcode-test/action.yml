@@ -23,6 +23,10 @@ inputs:
     description: Disable parallel testing when true; otherwise use the scheme setting.
     required: false
     default: 'false'
+  cache:
+    description: Cache Swift package checkouts between successful runs (true/false).
+    required: false
+    default: 'true'
 outputs:
   result-bundle-path:
     description: Absolute .xcresult path, published before testing. The bundle may not exist if Xcode fails before creating it.
@@ -30,6 +34,19 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Compute Swift package cache key
+      id: cache-key
+      if: ${{ inputs.cache == 'true' }}
+      shell: bash
+      run: |
+        xcode_version=$(xcodebuild -version | shasum -a 256 | cut -c 1-16)
+        printf 'xcode=%s\n' "$xcode_version" >> "$GITHUB_OUTPUT"
+    - name: Cache Swift packages
+      if: ${{ inputs.cache == 'true' }}
+      uses: actions/cache@v6
+      with:
+        path: ${{ runner.temp }}/xcode-test-source-packages
+        key: xcode-test-spm-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.cache-key.outputs.xcode }}-${{ hashFiles('**/Package.resolved', '**/Package.swift', '**/project.pbxproj') }}
     - name: Select destination and run tests
       id: test
       shell: bash

@@ -17,8 +17,9 @@ TYPE = "com.apple.CoreSimulator.SimDeviceType.iPhone-17"
 UDID = "11111111-2222-3333-4444-555555555555"
 NEW_UDID = "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"
 RESULT_PATH = "/tmp/xcode-test-example/Tests.xcresult"
+SOURCE_PACKAGES_PATH = "/tmp/xcode-test-source-packages"
 SIGNING_ARGS = ["CODE_SIGN_STYLE=Manual", "CODE_SIGN_IDENTITY=-", "DEVELOPMENT_TEAM="]
-TEST_ARGS = ["-resultBundlePath", RESULT_PATH, *SIGNING_ARGS]
+TEST_ARGS = ["-clonedSourcePackagesDirPath", SOURCE_PACKAGES_PATH, "-resultBundlePath", RESULT_PATH, *SIGNING_ARGS]
 
 
 def runtime(v="27.2", available=True):
@@ -231,9 +232,19 @@ class CommandTests(unittest.TestCase):
         results = patch.object(action, "prepare_result_bundle", return_value=RESULT_PATH)
         results.start()
         self.addCleanup(results.stop)
+        packages = patch.object(action, "source_packages_path", return_value=SOURCE_PACKAGES_PATH)
+        packages.start()
+        self.addCleanup(packages.stop)
         environment = patch.dict(os.environ, {"TEST_AD_HOC_SIGNING": "true", "TEST_DISABLE_PARALLELIZATION": "false"})
         environment.start()
         self.addCleanup(environment.stop)
+
+    def test_source_packages_path_is_always_passed(self):
+        with patch.dict(os.environ, {"TEST_DEVICE": "mac", "TEST_SCHEME": "App"}, clear=True), \
+             patch.object(action.sys, "platform", "darwin"), patch.object(action, "command") as cmd:
+            action.main()
+            args = cmd.call_args.args
+            self.assertEqual(args[args.index("-clonedSourcePackagesDirPath") + 1], SOURCE_PACKAGES_PATH)
 
     def test_mac_aliases_ignore_os_and_skip_simulator_selection(self):
         for query in ("mac", "MAC", "Mac", "macos", "MACOS", "macOS"):
@@ -388,6 +399,12 @@ class CommandTests(unittest.TestCase):
 
 
 class ResultBundleTests(unittest.TestCase):
+    def test_source_packages_path_uses_runner_temp(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.dict(os.environ, {"RUNNER_TEMP": directory}):
+            self.assertEqual(action.source_packages_path(),
+                             str(Path(directory).resolve() / "xcode-test-source-packages"))
+
     def test_unique_output_paths_do_not_precreate_bundles(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "output"
