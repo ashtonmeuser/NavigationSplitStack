@@ -2,12 +2,14 @@
 
 import json
 import os
+from pathlib import Path
 import platform
 import plistlib
 import re
 import shlex
 import subprocess
 import sys
+import tempfile
 
 
 CATALOG_URL = (
@@ -197,6 +199,17 @@ def select(query, os_prefix):
     return {"name": device_type["name"], "udid": udid}, runtime
 
 
+def prepare_result_bundle():
+    # Create only the parent: xcodebuild requires the bundle path not to exist.
+    directory = tempfile.mkdtemp(prefix="xcode-test-", dir=os.environ.get("RUNNER_TEMP") or None)
+    path = str(Path(directory).resolve() / "Tests.xcresult")
+    if os.environ.get("GITHUB_OUTPUT"):
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+            output.write(f"result-bundle-path={path}\n")
+    print(f"Result bundle: {path}", flush=True)
+    return path
+
+
 def main():
     if sys.platform != "darwin":
         raise ValueError("This action requires a macOS runner with Xcode selected.")
@@ -209,6 +222,9 @@ def main():
     project = os.environ.get("TEST_PROJECT", "")
     if project and (not project.endswith(".xcodeproj") or not os.path.isdir(project)):
         raise ValueError(f"Project does not exist or is not an .xcodeproj directory: {project!r}")
+    ad_hoc_signing = os.environ.get("TEST_AD_HOC_SIGNING", "true").strip().lower()
+    if ad_hoc_signing not in ("true", "false"):
+        raise ValueError("ad-hoc-signing must be true or false.")
     if is_mac:
         destination = "platform=macOS"
         print("Testing on the runner's current macOS", flush=True)
@@ -219,6 +235,9 @@ def main():
     args = ["xcodebuild", "test", "-scheme", scheme, "-destination", destination]
     if project:
         args.extend(["-project", project])
+    args.extend(["-resultBundlePath", prepare_result_bundle()])
+    if ad_hoc_signing == "true":
+        args.extend(["CODE_SIGN_STYLE=Manual", "CODE_SIGN_IDENTITY=-", "DEVELOPMENT_TEAM="])
     command(*args)
 
 

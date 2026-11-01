@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import plistlib
 import subprocess
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -15,6 +16,9 @@ spec.loader.exec_module(action)
 TYPE = "com.apple.CoreSimulator.SimDeviceType.iPhone-17"
 UDID = "11111111-2222-3333-4444-555555555555"
 NEW_UDID = "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"
+RESULT_PATH = "/tmp/xcode-test-example/Tests.xcresult"
+SIGNING_ARGS = ["CODE_SIGN_STYLE=Manual", "CODE_SIGN_IDENTITY=-", "DEVELOPMENT_TEAM="]
+TEST_ARGS = ["-resultBundlePath", RESULT_PATH, *SIGNING_ARGS]
 
 
 def runtime(v="27.2", available=True):
@@ -219,6 +223,14 @@ class DownloadTests(unittest.TestCase):
 
 
 class CommandTests(unittest.TestCase):
+    def setUp(self):
+        results = patch.object(action, "prepare_result_bundle", return_value=RESULT_PATH)
+        results.start()
+        self.addCleanup(results.stop)
+        environment = patch.dict(os.environ, {"TEST_AD_HOC_SIGNING": "true"})
+        environment.start()
+        self.addCleanup(environment.stop)
+
     def test_mac_aliases_ignore_os_and_skip_simulator_selection(self):
         for query in ("mac", "MAC", "Mac", "macos", "MACOS", "macOS"):
             for os_version in (None, "", "26", "ignored"):
@@ -237,6 +249,7 @@ class CommandTests(unittest.TestCase):
                         expected = ["xcodebuild", "test", "-scheme", "App", "-destination", "platform=macOS"]
                         if project:
                             expected += ["-project", project]
+                        expected += TEST_ARGS
                         cmd.assert_called_once_with(*expected)
 
     def test_mac_prefix_is_not_an_alias(self):
@@ -262,7 +275,7 @@ class CommandTests(unittest.TestCase):
                     os.environ["TEST_OS"] = os_version
                 action.main()
                 select.assert_called_once_with("iPhone", "")
-                cmd.assert_called_once_with("xcodebuild", "test", "-scheme", "App", "-destination", f"id={UDID}")
+                cmd.assert_called_once_with("xcodebuild", "test", "-scheme", "App", "-destination", f"id={UDID}", *TEST_ARGS)
 
     def test_simulators_reject_invalid_nonempty_os(self):
         for os_version in ("ignored", "27.x", " "):
@@ -286,13 +299,72 @@ class CommandTests(unittest.TestCase):
                 expected = ["xcodebuild", "test", "-scheme", "App $(false)", "-destination", f"id={UDID}"]
                 if project:
                     expected += ["-project", project]
+                expected += TEST_ARGS
                 cmd.assert_called_once_with(*expected)
+
+    def test_ad_hoc_signing_can_be_disabled_on_mac_and_simulators(self):
+        for query in ("mac", "iPhone"):
+            for enabled in ("true", "false", "FALSE"):
+                with self.subTest(query=query, signing=enabled), \
+                     patch.dict(os.environ, {"TEST_DEVICE": query, "TEST_SCHEME": "App", "TEST_AD_HOC_SIGNING": enabled}, clear=True), \
+                     patch.object(action.sys, "platform", "darwin"), \
+                     patch.object(action, "select", return_value=({"name": "iPhone 17", "udid": UDID}, runtime())), \
+                     patch.object(action, "command") as cmd:
+                    action.main()
+                    args = cmd.call_args.args
+                    for setting in SIGNING_ARGS:
+                        self.assertEqual(setting in args, enabled == "true")
+                    self.assertIn("-resultBundlePath", args)
+
+    def test_invalid_signing_toggle_fails_before_provisioning(self):
+        with patch.dict(os.environ, {"TEST_DEVICE": "iPhone", "TEST_SCHEME": "App", "TEST_AD_HOC_SIGNING": "yes"}, clear=True), \
+             patch.object(action.sys, "platform", "darwin"), \
+             patch.object(action, "select") as select, patch.object(action, "command") as cmd:
+            with self.assertRaisesRegex(ValueError, "ad-hoc-signing must be true or false"):
+                action.main()
+            select.assert_not_called()
+            cmd.assert_not_called()
 
     def test_xcodebuild_failure_is_not_swallowed(self):
         with patch.object(action.subprocess, "run", side_effect=subprocess.CalledProcessError(65, "xcodebuild")):
             with self.assertRaises(subprocess.CalledProcessError) as error:
                 action.command("xcodebuild", "test")
             self.assertEqual(error.exception.returncode, 65)
+
+
+class ResultBundleTests(unittest.TestCase):
+    def test_unique_output_paths_do_not_precreate_bundles(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "output"
+            output.write_text("existing=value\n")
+            with patch.dict(os.environ, {"RUNNER_TEMP": directory, "GITHUB_OUTPUT": str(output)}):
+                first = Path(action.prepare_result_bundle())
+                second = Path(action.prepare_result_bundle())
+            self.assertNotEqual(first, second)
+            for path in (first, second):
+                self.assertTrue(path.is_absolute())
+                self.assertEqual(path.parent.parent, Path(directory).resolve())
+                self.assertTrue(path.parent.is_dir())
+                self.assertFalse(path.exists())
+                self.assertEqual(path.suffix, ".xcresult")
+            self.assertEqual(output.read_text(), f"existing=value\nresult-bundle-path={first}\nresult-bundle-path={second}\n")
+
+    def test_output_is_published_before_failed_test_command(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "output"
+            def fail(*args):
+                bundle = args[args.index("-resultBundlePath") + 1]
+                self.assertEqual(output.read_text(), f"result-bundle-path={bundle}\n")
+                Path(bundle).mkdir()
+                raise subprocess.CalledProcessError(65, args)
+            with patch.dict(os.environ, {"TEST_DEVICE": "macOS", "TEST_SCHEME": "App", "RUNNER_TEMP": directory, "GITHUB_OUTPUT": str(output)}, clear=True), \
+                 patch.object(action.sys, "platform", "darwin"), \
+                 patch.object(action, "command", side_effect=fail):
+                with self.assertRaises(subprocess.CalledProcessError) as error:
+                    action.main()
+            self.assertEqual(error.exception.returncode, 65)
+            bundle = output.read_text().strip().split("=", 1)[1]
+            self.assertTrue(Path(bundle).is_dir())
 
 
 if __name__ == "__main__":

@@ -23,6 +23,11 @@ on:
         type: string
         required: false
         default: Examples/Examples.xcodeproj
+      ad-hoc-signing:
+        description: Use local ad-hoc signing instead of the project's signing settings
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -32,15 +37,22 @@ jobs:
     name: Test ${{ inputs.scheme }} on ${{ inputs.device }}
     runs-on: xcode-27
     timeout-minutes: 60
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
-      # Checkout uses the branch selected in the Run workflow dialog.
       - uses: actions/checkout@v7
       - name: Run local Xcode action
+        id: xcode-test
         uses: ./.github/actions/xcode-test
         with:
           device: ${{ inputs.device }}
           os: ${{ inputs.os }}
           scheme: ${{ inputs.scheme }}
           project: ${{ inputs.project }}
+          ad-hoc-signing: ${{ inputs.ad-hoc-signing }}
+      - name: Upload failed test results
+        if: ${{ failure() && steps.xcode-test.outputs.result-bundle-path != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: xcode-test-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.xcode-test.outputs.result-bundle-path }}
+          if-no-files-found: ignore
+          include-hidden-files: true
