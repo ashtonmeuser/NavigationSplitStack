@@ -15,10 +15,19 @@ inputs:
     description: Optional .xcodeproj path, relative to the caller's working directory.
     required: false
     default: ''
+  ad-hoc-signing:
+    description: Use local ad-hoc signing (true/false). Set false to preserve the project's signing settings.
+    required: false
+    default: 'true'
+outputs:
+  result-bundle-path:
+    description: Absolute .xcresult path, published before testing. The bundle may not exist if Xcode fails before creating it.
+    value: ${{ steps.test.outputs.result-bundle-path }}
 runs:
   using: composite
   steps:
     - name: Select destination and run tests
+      id: test
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
@@ -26,4 +35,5 @@ runs:
         TEST_OS: ${{ inputs.os }}
         TEST_SCHEME: ${{ inputs.scheme }}
         TEST_PROJECT: ${{ inputs.project }}
+        TEST_AD_HOC_SIGNING: ${{ inputs.ad-hoc-signing }}
       run: python3 "$ACTION_PATH/run.py"

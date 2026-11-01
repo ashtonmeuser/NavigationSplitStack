@@ -1,7 +1,8 @@
 # Xcode tests
 
-A standalone composite action with four inputs. Device and scheme are required;
+A standalone composite action with five inputs. Device and scheme are required;
 OS version and project are optional. OS version is ignored for macOS.
+Local ad-hoc signing is enabled by default and can be disabled.
 Copy this directory into another repository, or put its contents at the root of
 a dedicated action repository. It needs macOS, a selected and initialized Xcode,
 Python 3, and curl. It uses only Python's standard library.
@@ -28,6 +29,7 @@ omitting `project` leaves project/workspace discovery to `xcodebuild`.
 | `os` | No | Numeric, literal version prefix. Omit or leave empty for any version. Quote this YAML value. Ignored for macOS. |
 | `scheme` | Yes | Shared scheme containing the tests to run. |
 | `project` | No | `.xcodeproj` path relative to the working directory. |
+| `ad-hoc-signing` | No | `true` (default) adds local ad-hoc signing overrides; `false` preserves project signing settings. |
 
 `iPhone` matches `iPhone 17` and `iPhone 18 Pro Max`. `iPad Pro` matches
 `iPad Pro 13-inch (M5)`; use `iPad` to also match `iPad Air 11-inch (M4)`.
@@ -92,20 +94,64 @@ It is fetched only when a download is necessary. Xcode remains the final
 authority on downloadable builds and compatibility; unavailable downloads,
 unsupported device/runtime combinations, and test failures fail the action.
 Installing a runtime cannot add a device type absent from the selected Xcode.
-The action does not change signing or other project build settings.
 
 The installation command follows Apple's
 [Xcode component documentation](https://developer.apple.com/documentation/xcode/downloading-and-installing-additional-xcode-components).
 Inputs are passed through environment variables and subprocess argument arrays,
 so spaces and shell metacharacters remain literal.
 
+## Signing and test results
+
+By default, `ad-hoc-signing: 'true'` adds these build settings to the test command:
+
+```text
+CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=
+```
+
+This selects local ad-hoc signing for simulator and macOS tests. It is not
+Ad Hoc distribution to physical iOS devices. If your project requires a
+particular signing identity, team, or provisioning setup, set
+`ad-hoc-signing: 'false'` and configure signing in the project/runner. The action
+accepts `true` or `false` strings; the manual workflow presents a checkbox.
+
+Every test invocation passes a unique `-resultBundlePath` under `RUNNER_TEMP`
+(or the system temporary directory when run locally). There is no input for
+the path. The `result-bundle-path` output contains its absolute `.xcresult` path.
+It is published before the test command, so it remains available when that
+command fails. Failures during validation or simulator setup do not publish a
+path; Xcode can also fail before it creates a bundle at the published path.
+
+The caller controls uploading. The manual workflow uploads the bundle on
+failure, skips missing bundles, and preserves hidden files inside the bundle.
+Other workflows can use the same pattern:
+
+```yaml
+- uses: ./.github/actions/xcode-test
+  id: tests
+  with:
+    device: iPhone
+    scheme: Minimal
+    project: Examples/Examples.xcodeproj
+    ad-hoc-signing: 'true'
+- uses: actions/upload-artifact@v7
+  if: ${{ failure() && steps.tests.outputs.result-bundle-path != '' }}
+  with:
+    name: test-results
+    path: ${{ steps.tests.outputs.result-bundle-path }}
+    if-no-files-found: ignore
+    include-hidden-files: true
+```
+
+Use distinct artifact names for multiple action invocations or matrix jobs.
+Bundles remain on disk after the action; uploading is not part of the composite.
+
 ## Validation
 
 ### Manual GitHub run
 
 This repository includes a [manual test workflow](../../workflows/test-xcode-action.yml)
-with fields for all four action inputs. It uses the same `xcode-27` runner and
-Xcode installation as the repository's existing CI.
+with fields for all five action inputs. It uses the `xcode-27` runner and its
+default Xcode selection.
 
 GitHub requires the wrapper workflow to exist on the default branch to expose
 the **Run workflow** button. Put the wrapper on the default branch and the branch
@@ -117,6 +163,8 @@ being tested; the action implementation can remain on the test branch.
 4. Enter `device`, optionally `os`, and the scheme/project. Defaults use
    `iPhone`, the newest compatible installed OS, `Minimal`, and
    `Examples/Examples.xcodeproj`. Clear `project` to test project auto-discovery.
+   Leave `ad-hoc-signing` checked for local ad-hoc signing, or uncheck it to use
+   the project's signing settings.
 5. Select **Run workflow** and inspect the **Run local Xcode action** step.
 
 Checkout uses the selected branch, so the local action runs that branch's code.
@@ -132,5 +180,5 @@ python3 -m unittest discover -s .github/actions/xcode-test/tests -v
 ```
 
 Tests cover selection, unavailable runtimes, exact identifiers, provisioning,
-catalog filtering, argument handling, and command failures without downloading
+catalog filtering, signing overrides, result outputs, and command failures without downloading
 runtimes or changing the simulator inventory.
