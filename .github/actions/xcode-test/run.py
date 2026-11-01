@@ -1,4 +1,4 @@
-"""Simulator discovery and provisioning; Python standard library only."""
+"""Test on macOS or a provisioned simulator; Python standard library only."""
 
 import json
 import os
@@ -193,16 +193,22 @@ def main():
     if sys.platform != "darwin":
         raise ValueError("This action requires a macOS runner with Xcode selected.")
     query, os_prefix, scheme = (os.environ.get(key, "") for key in ("TEST_DEVICE", "TEST_OS", "TEST_SCHEME"))
-    if not all(value.strip() for value in (query, os_prefix, scheme)):
-        raise ValueError("device, os, and scheme are required.")
-    if not re.fullmatch(r"[0-9]+(?:\.[0-9]+){0,2}", os_prefix):
-        raise ValueError("os must be a numeric version prefix, such as 27 or 27.2.")
+    if not all(value.strip() for value in (query, scheme)):
+        raise ValueError("device and scheme are required.")
+    is_mac = query.lower() in ("mac", "macos")
+    if not is_mac and not re.fullmatch(r"[0-9]+(?:\.[0-9]+){0,2}", os_prefix):
+        raise ValueError("os is required for simulators and must be a numeric version prefix, such as 27 or 27.2.")
     project = os.environ.get("TEST_PROJECT", "")
     if project and (not project.endswith(".xcodeproj") or not os.path.isdir(project)):
         raise ValueError(f"Project does not exist or is not an .xcodeproj directory: {project!r}")
-    device, runtime = select(query, os_prefix)
-    print(f"Testing on {device['name']} / {runtime['version']} / {device['udid']}", flush=True)
-    args = ["xcodebuild", "test", "-scheme", scheme, "-destination", f"id={device['udid']}"]
+    if is_mac:
+        destination = "platform=macOS"
+        print("Testing on the runner's current macOS", flush=True)
+    else:
+        device, runtime = select(query, os_prefix)
+        destination = f"id={device['udid']}"
+        print(f"Testing on {device['name']} / {runtime['version']} / {device['udid']}", flush=True)
+    args = ["xcodebuild", "test", "-scheme", scheme, "-destination", destination]
     if project:
         args.extend(["-project", project])
     command(*args)

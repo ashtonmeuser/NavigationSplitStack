@@ -161,6 +161,48 @@ class DownloadTests(unittest.TestCase):
 
 
 class CommandTests(unittest.TestCase):
+    def test_mac_aliases_ignore_os_and_skip_simulator_selection(self):
+        for query in ("mac", "MAC", "Mac", "macos", "MACOS", "macOS"):
+            for os_version in (None, "", "26", "ignored"):
+                for project in ("", "App.xcodeproj"):
+                    with self.subTest(query=query, os=os_version, project=project), \
+                         patch.dict(os.environ, {"TEST_DEVICE": query, "TEST_SCHEME": "App", "TEST_PROJECT": project}, clear=True), \
+                         patch.object(action.sys, "platform", "darwin"), \
+                         patch.object(action.os.path, "isdir", return_value=True), \
+                         patch.object(action, "select") as select, \
+                         patch.object(action, "command") as cmd, \
+                         patch("builtins.print"):
+                        if os_version is not None:
+                            os.environ["TEST_OS"] = os_version
+                        action.main()
+                        select.assert_not_called()
+                        expected = ["xcodebuild", "test", "-scheme", "App", "-destination", "platform=macOS"]
+                        if project:
+                            expected += ["-project", project]
+                        cmd.assert_called_once_with(*expected)
+
+    def test_mac_prefix_is_not_an_alias(self):
+        for query in ("MacBook Pro", "macos-simulator", "machine"):
+            with self.subTest(query=query), \
+                 patch.dict(os.environ, {"TEST_DEVICE": query, "TEST_OS": "27", "TEST_SCHEME": "App", "TEST_PROJECT": ""}), \
+                 patch.object(action.sys, "platform", "darwin"), \
+                 patch.object(action, "select", side_effect=ValueError("No simulator")) as select, \
+                 patch.object(action, "command") as cmd:
+                with self.assertRaisesRegex(ValueError, "No simulator"):
+                    action.main()
+                select.assert_called_once_with(query, "27")
+                cmd.assert_not_called()
+
+    def test_simulators_still_require_numeric_os(self):
+        for os_version in ("", "ignored"):
+            with self.subTest(os=os_version), \
+                 patch.dict(os.environ, {"TEST_DEVICE": "iPhone", "TEST_OS": os_version, "TEST_SCHEME": "App"}), \
+                 patch.object(action.sys, "platform", "darwin"), \
+                 patch.object(action, "command") as cmd:
+                with self.assertRaisesRegex(ValueError, "os is required for simulators"):
+                    action.main()
+                cmd.assert_not_called()
+
     def test_optional_project_and_literal_scheme_arguments(self):
         for project in ("", "Folder with spaces/App.xcodeproj"):
             with self.subTest(project=project), \

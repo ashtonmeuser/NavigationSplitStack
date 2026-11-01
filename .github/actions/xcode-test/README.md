@@ -1,6 +1,7 @@
-# Xcode simulator tests
+# Xcode tests
 
-A standalone composite action with three required inputs and one optional input.
+A standalone composite action with four inputs. Device and scheme are required;
+OS version is required for simulators and ignored for macOS. Project is optional.
 Copy this directory into another repository, or put its contents at the root of
 a dedicated action repository. It needs macOS, a selected and initialized Xcode,
 Python 3, and curl. It uses only Python's standard library.
@@ -23,8 +24,8 @@ omitting `project` leaves project/workspace discovery to `xcodebuild`.
 
 | Input | Required | Meaning |
 | --- | --- | --- |
-| `device` | Yes | Case-sensitive name prefix, exact `udid`, or exact `deviceTypeIdentifier`. |
-| `os` | Yes | Numeric, literal version prefix. Quote this YAML value. |
+| `device` | Yes | Case-sensitive simulator name prefix, exact `udid`/`deviceTypeIdentifier`, or case-insensitive `mac`/`macos`. |
+| `os` | Simulators only | Numeric, literal version prefix. Quote this YAML value. Ignored for macOS. |
 | `scheme` | Yes | Shared scheme containing the tests to run. |
 | `project` | No | `.xcodeproj` path relative to the working directory. |
 
@@ -35,7 +36,23 @@ Identifier matching is exact, for example
 match. `27` matches `27.0` and `27.2`; literal prefix semantics also mean `27.1`
 matches `27.10`.
 
+Use `device: mac` or `device: macos` (any capitalization) to run on the runner's
+current OS with `-destination platform=macOS`. The action skips all simulator
+discovery and downloads, and ignores `os` entirely, including an omitted or
+nonnumeric value. Only these exact aliases select macOS; names such as
+`MacBook Pro` or `macos-simulator` do not.
+
+```yaml
+- uses: ./.github/actions/xcode-test
+  with:
+    device: macOS
+    scheme: Minimal
+    project: Examples/Examples.xcodeproj
+```
+
 ## Selection and installation
+
+For simulator destinations:
 
 1. Query `xcrun simctl list --json`. Reuse an available device whose name or
    identifier matches and whose available runtime version starts with `os`.
@@ -58,8 +75,8 @@ mismatch fails. If its runtime was removed, the action attempts to reinstall
 that version and reuse the same UUID; it never creates a replacement UUID.
 
 The platform is inferred from Xcode's device type metadata: iOS, tvOS, watchOS,
-or visionOS. This action does not configure watch/phone pairing or test on macOS
-itself. Xcode handles booting the test destination. Existing devices and newly
+or visionOS. This action does not configure watch/phone pairing.
+Xcode handles booting the test destination. Existing devices and newly
 installed runtimes/devices remain on the runner after the action.
 
 Apple's catalog is an external dependency with no guaranteed public schema.
