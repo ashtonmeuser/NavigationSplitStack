@@ -225,6 +225,9 @@ def main():
     ad_hoc_signing = os.environ.get("TEST_AD_HOC_SIGNING", "true").strip().lower()
     if ad_hoc_signing not in ("true", "false"):
         raise ValueError("ad-hoc-signing must be true or false.")
+    disable_parallelization = os.environ.get("TEST_DISABLE_PARALLELIZATION", "false").strip().lower()
+    if disable_parallelization not in ("true", "false"):
+        raise ValueError("disableParallelization must be true or false.")
     if is_mac:
         destination = "platform=macOS"
         print("Testing on the runner's current macOS", flush=True)
@@ -232,9 +235,14 @@ def main():
         device, runtime = select(query, os_prefix)
         destination = f"id={device['udid']}"
         print(f"Testing on {device['name']} / {runtime['version']} / {device['udid']}", flush=True)
+        # Boots if needed and waits for startup/data migration to finish.
+        # Works for both existing booted devices and newly created simulators.
+        command("xcrun", "simctl", "bootstatus", device["udid"], "-b")
     args = ["xcodebuild", "test", "-scheme", scheme, "-destination", destination]
     if project:
         args.extend(["-project", project])
+    if disable_parallelization == "true":
+        args.extend(["-parallel-testing-enabled", "NO"])
     args.extend(["-resultBundlePath", prepare_result_bundle()])
     if ad_hoc_signing == "true":
         args.extend(["CODE_SIGN_STYLE=Manual", "CODE_SIGN_IDENTITY=-", "DEVELOPMENT_TEAM="])

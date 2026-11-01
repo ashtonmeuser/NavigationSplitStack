@@ -19,6 +19,10 @@ inputs:
     description: Use local ad-hoc signing (true/false). Set false to preserve the project's signing settings.
     required: false
     default: 'true'
+  disableParallelization:
+    description: Disable parallel testing when true; otherwise use the scheme setting.
+    required: false
+    default: 'false'
 outputs:
   result-bundle-path:
     description: Absolute .xcresult path, published before testing. The bundle may not exist if Xcode fails before creating it.
@@ -36,4 +40,5 @@ runs:
         TEST_SCHEME: ${{ inputs.scheme }}
         TEST_PROJECT: ${{ inputs.project }}
         TEST_AD_HOC_SIGNING: ${{ inputs.ad-hoc-signing }}
+        TEST_DISABLE_PARALLELIZATION: ${{ inputs.disableParallelization }}
       run: python3 "$ACTION_PATH/run.py"
