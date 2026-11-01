@@ -5,8 +5,9 @@ inputs:
     description: Case-sensitive simulator name prefix, exact UDID/type identifier, or mac/macos (case insensitive).
     required: true
   os:
-    description: OS version prefix, such as '27' or '27.2'. Required for simulators; ignored for mac/macOS.
+    description: Optional OS version prefix. Selects the newest compatible installed version matching the prefix (any version if omitted), or downloads a match if needed. Ignored for mac/macOS.
     required: false
+    default: ''
   scheme:
     description: Shared Xcode scheme to test.
     required: true
