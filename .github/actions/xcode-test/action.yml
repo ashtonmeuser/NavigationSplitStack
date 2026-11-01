@@ -1,12 +1,12 @@
-name: Xcode simulator tests
-description: Find or provision a matching simulator, then run xcodebuild test.
+name: Xcode tests
+description: Run xcodebuild test on macOS or a matching simulator, provisioning it if needed.
 inputs:
   device:
-    description: Case-sensitive device name prefix, exact UDID, or exact deviceTypeIdentifier.
+    description: Case-sensitive simulator name prefix, exact UDID/type identifier, or mac/macos (case insensitive).
     required: true
   os:
-    description: OS version prefix, such as '27' or '27.2'.
-    required: true
+    description: OS version prefix, such as '27' or '27.2'. Required for simulators; ignored for mac/macOS.
+    required: false
   scheme:
     description: Shared Xcode scheme to test.
     required: true
@@ -17,7 +17,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Select simulator and run tests
+    - name: Select destination and run tests
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
