@@ -74,6 +74,50 @@ class SelectionTests(unittest.TestCase):
             self.assertEqual(action.select("iPhone", "27")[0]["udid"], UDID)
             cmd.assert_not_called()
 
+    def test_newest_existing_device_with_empty_or_partial_os(self):
+        data = inventory()
+        older = runtime("27.0.1")
+        newer = runtime("28.0")
+        data["runtimes"].extend([older, newer])
+        for r in (older, newer):
+            data["devices"][r["identifier"]] = copy.deepcopy(data["devices"][runtime()["identifier"]])
+        for os_prefix, expected in (("", "28.0"), ("27", "27.2"), ("27.0", "27.0.1")):
+            with self.subTest(os=os_prefix), patch.object(action, "inventory", return_value=data), \
+                 patch.object(action, "command") as cmd:
+                self.assertEqual(action.select("iPhone", os_prefix)[1]["version"], expected)
+                cmd.assert_not_called()
+
+    def test_newer_runtime_beats_existing_device_on_older_runtime(self):
+        data = inventory()
+        older = runtime("27.0.1")
+        data["runtimes"].append(older)
+        data["devices"][older["identifier"]] = data["devices"].pop(runtime()["identifier"])
+        for os_prefix in ("", "27"):
+            for query in ("iPhone", TYPE):
+                with self.subTest(os=os_prefix, query=query), \
+                     patch.object(action, "inventory", return_value=data), \
+                     patch.object(action, "command", return_value=NEW_UDID.encode()) as cmd:
+                    device, selected = action.select(query, os_prefix)
+                    self.assertEqual((device["udid"], selected["version"]), (NEW_UDID, "27.2"))
+                    cmd.assert_called_once_with("xcrun", "simctl", "create", "iPhone 17", TYPE,
+                                                runtime()["identifier"], capture=True)
+
+    def test_latest_runtime_must_support_the_requested_device(self):
+        data = inventory()
+        incompatible = runtime("28.0")
+        incompatible["supportedDeviceTypes"] = []
+        data["runtimes"].extend([incompatible, runtime("29.0", available=False)])
+        with patch.object(action, "inventory", return_value=data), patch.object(action, "command") as cmd:
+            self.assertEqual(action.select(TYPE, "")[1]["version"], "27.2")
+            cmd.assert_not_called()
+
+    def test_uuid_with_empty_os_keeps_original_runtime(self):
+        data = inventory()
+        data["runtimes"].append(runtime("28.0"))
+        with patch.object(action, "inventory", return_value=data), patch.object(action, "command") as cmd:
+            self.assertEqual(action.select(UDID, "")[1]["version"], "27.2")
+            cmd.assert_not_called()
+
     def test_create_from_installed_runtime_without_download(self):
         data = inventory()
         data["devices"] = {}
@@ -109,6 +153,20 @@ class DownloadTests(unittest.TestCase):
         final = downloadable("27.2")
         beta = downloadable("27.2", name="iOS 27.2 beta Simulator Runtime")
         self.assertEqual(self.choose([downloadable("27.0"), final, beta]), final)
+
+    def test_empty_os_downloads_newest_compatible_version(self):
+        before = inventory()
+        before["runtimes"] = []
+        before["devices"] = {}
+        catalog = {"downloadables": [downloadable("27.0.1", "24A1"), downloadable("27.2"),
+                                     downloadable("28.0", hostRequirements={"minXcodeVersion": "28.0"})]}
+        with patch.object(action, "inventory", side_effect=[before, inventory()]), \
+             patch.object(action, "command", side_effect=[plistlib.dumps(catalog), b"Xcode 27.1\n", None]) as cmd, \
+             patch.object(action.platform, "machine", return_value="arm64"), \
+             patch.object(action.platform, "mac_ver", return_value=("27.0", (), "")):
+            self.assertEqual(action.select("iPhone", "")[1]["version"], "27.2")
+            cmd.assert_any_call("xcodebuild", "-downloadPlatform", "iOS", "-buildVersion", "24B100",
+                                "-architectureVariant", "arm64")
 
     def test_catalog_filters_platform_architecture_host_and_device_compatibility(self):
         good = downloadable("27.0")
@@ -193,13 +251,26 @@ class CommandTests(unittest.TestCase):
                 select.assert_called_once_with(query, "27")
                 cmd.assert_not_called()
 
-    def test_simulators_still_require_numeric_os(self):
-        for os_version in ("", "ignored"):
+    def test_simulators_accept_omitted_or_empty_os(self):
+        for os_version in (None, ""):
+            with self.subTest(os=os_version), \
+                 patch.dict(os.environ, {"TEST_DEVICE": "iPhone", "TEST_SCHEME": "App"}, clear=True), \
+                 patch.object(action.sys, "platform", "darwin"), \
+                 patch.object(action, "select", return_value=({"name": "iPhone 17", "udid": UDID}, runtime())) as select, \
+                 patch.object(action, "command") as cmd:
+                if os_version is not None:
+                    os.environ["TEST_OS"] = os_version
+                action.main()
+                select.assert_called_once_with("iPhone", "")
+                cmd.assert_called_once_with("xcodebuild", "test", "-scheme", "App", "-destination", f"id={UDID}")
+
+    def test_simulators_reject_invalid_nonempty_os(self):
+        for os_version in ("ignored", "27.x", " "):
             with self.subTest(os=os_version), \
                  patch.dict(os.environ, {"TEST_DEVICE": "iPhone", "TEST_OS": os_version, "TEST_SCHEME": "App"}), \
                  patch.object(action.sys, "platform", "darwin"), \
                  patch.object(action, "command") as cmd:
-                with self.assertRaisesRegex(ValueError, "os is required for simulators"):
+                with self.assertRaisesRegex(ValueError, "os must be empty or a numeric version prefix"):
                     action.main()
                 cmd.assert_not_called()
 

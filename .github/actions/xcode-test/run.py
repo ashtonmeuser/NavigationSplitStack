@@ -96,6 +96,15 @@ def creatable(data, query, os_prefix):
     return None
 
 
+def installed_choice(data, query, os_prefix):
+    """Choose the newest usable runtime, creating a device only when necessary."""
+    selected = existing(data, query, os_prefix)
+    creation = creatable(data, query, os_prefix)
+    if selected and creation and version(creation[1]["version"]) > version(selected[1]["version"]):
+        selected = None
+    return selected, creation
+
+
 def pinned_runtime(data, query, os_prefix):
     """A UUID must retain its original runtime as well as its identity."""
     if not UUID.fullmatch(query):
@@ -128,6 +137,7 @@ def download_candidate(catalog, types, os_prefix, architecture, xcode_version, h
         sim = item.get("simulatorVersion", {})
         os_version = sim.get("version", "")
         if (item.get("platform") != "com.apple.platform." + platform_id
+                or not os_version
                 or not os_version.startswith(os_prefix)
                 or architecture not in item.get("architectures", ["arm64", "x86_64"])
                 or not any(supports_version(d, os_version) for d in types)):
@@ -153,11 +163,10 @@ def download_candidate(catalog, types, os_prefix, architecture, xcode_version, h
 
 def select(query, os_prefix):
     data = inventory()
-    selected = existing(data, query, os_prefix)
+    selected, creation = installed_choice(data, query, os_prefix)
     if selected:
         return selected
     pinned = pinned_runtime(data, query, os_prefix)
-    creation = creatable(data, query, os_prefix)
     if not creation:
         types = candidate_types(data, query)
         if not types:
@@ -175,10 +184,9 @@ def select(query, os_prefix):
                 "-buildVersion", item["simulatorVersion"]["buildUpdate"],
                 "-architectureVariant", "arm64" if platform.machine() == "arm64" else "universal")
         data = inventory()
-        selected = existing(data, query, os_prefix)
+        selected, creation = installed_choice(data, query, os_prefix)
         if selected:
             return selected
-        creation = creatable(data, query, os_prefix)
     if not creation:
         raise ValueError(f"No usable simulator matches {query!r} and OS {os_prefix} after installation.")
     device_type, runtime = creation
@@ -196,8 +204,8 @@ def main():
     if not all(value.strip() for value in (query, scheme)):
         raise ValueError("device and scheme are required.")
     is_mac = query.lower() in ("mac", "macos")
-    if not is_mac and not re.fullmatch(r"[0-9]+(?:\.[0-9]+){0,2}", os_prefix):
-        raise ValueError("os is required for simulators and must be a numeric version prefix, such as 27 or 27.2.")
+    if not is_mac and os_prefix and not re.fullmatch(r"[0-9]+(?:\.[0-9]+){0,2}", os_prefix):
+        raise ValueError("os must be empty or a numeric version prefix, such as 27 or 27.2.")
     project = os.environ.get("TEST_PROJECT", "")
     if project and (not project.endswith(".xcodeproj") or not os.path.isdir(project)):
         raise ValueError(f"Project does not exist or is not an .xcodeproj directory: {project!r}")
