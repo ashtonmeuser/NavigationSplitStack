@@ -1,0 +1,46 @@
+name: Test Xcode action
+
+on:
+  workflow_dispatch:
+    inputs:
+      device:
+        description: Device name prefix, exact UDID/type identifier, or mac/macOS
+        type: string
+        required: true
+        default: iPhone
+      os:
+        description: Optional OS prefix (blank selects newest compatible installed version; ignored for macOS)
+        type: string
+        required: false
+        default: ''
+      scheme:
+        description: Shared Xcode scheme to test
+        type: string
+        required: true
+        default: Minimal
+      project:
+        description: Optional .xcodeproj path relative to the repository root
+        type: string
+        required: false
+        default: Examples/Examples.xcodeproj
+
+permissions:
+  contents: read
+
+jobs:
+  test-action:
+    name: Test ${{ inputs.scheme }} on ${{ inputs.device }}
+    runs-on: xcode-27
+    timeout-minutes: 60
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      # Checkout uses the branch selected in the Run workflow dialog.
+      - uses: actions/checkout@v7
+      - name: Run local Xcode action
+        uses: ./.github/actions/xcode-test
+        with:
+          device: ${{ inputs.device }}
+          os: ${{ inputs.os }}
+          scheme: ${{ inputs.scheme }}
+          project: ${{ inputs.project }}
