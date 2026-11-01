@@ -47,7 +47,7 @@ def matches(device, query):
         return device.get("udid") == query
     if query.startswith("com.apple.CoreSimulator.SimDeviceType."):
         return device.get("deviceTypeIdentifier", device.get("identifier")) == query
-    return device["name"].startswith(query)
+    return device["name"].casefold().startswith(query.casefold())
 
 
 def matching_runtimes(data, os_prefix):

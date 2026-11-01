@@ -2,7 +2,7 @@ name: Xcode tests
 description: Run xcodebuild test on macOS or a matching simulator, provisioning it if needed.
 inputs:
   device:
-    description: Case-sensitive simulator name prefix, exact UDID/type identifier, or mac/macos (case insensitive).
+    description: Case-insensitive simulator name prefix, exact UDID/type identifier, or mac/macos (case insensitive).
     required: true
   os:
     description: Optional OS version prefix. Selects the newest compatible installed version matching the prefix (any version if omitted), or downloads a match if needed. Ignored for mac/macOS.

@@ -26,14 +26,14 @@ omitting `project` leaves project/workspace discovery to `xcodebuild`.
 
 | Input | Required | Meaning |
 | --- | --- | --- |
-| `device` | Yes | Case-sensitive simulator name prefix, exact `udid`/`deviceTypeIdentifier`, or case-insensitive `mac`/`macos`. |
+| `device` | Yes | Case-insensitive simulator name prefix, exact `udid`/`deviceTypeIdentifier`, or case-insensitive `mac`/`macos`. |
 | `os` | No | Numeric, literal version prefix. Omit or leave empty for any version. Quote this YAML value. Ignored for macOS. |
 | `scheme` | Yes | Shared scheme containing the tests to run. |
 | `project` | No | `.xcodeproj` path relative to the working directory. |
 | `ad-hoc-signing` | No | `true` (default) adds local ad-hoc signing overrides; `false` preserves project signing settings. |
 | `disableParallelization` | No | `false` (default) uses the scheme setting; `true` passes `-parallel-testing-enabled NO`. |
 
-`iPhone` matches `iPhone 17` and `iPhone 18 Pro Max`. `iPad Pro` matches
+`iPhone` and `iphone` both match `iPhone 17` and `iPhone 18 Pro Max`. `iPad Pro` matches
 `iPad Pro 13-inch (M5)`; use `iPad` to also match `iPad Air 11-inch (M4)`.
 Identifier matching is exact, for example
 `com.apple.CoreSimulator.SimDeviceType.iPhone-17`. Partial identifiers do not

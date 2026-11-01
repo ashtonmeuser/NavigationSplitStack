@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       device:
-        description: Device name prefix, exact UDID/type identifier, or mac/macOS
+        description: Case-insensitive device name prefix, exact UDID/type identifier, or mac/macOS
         type: string
         required: true
         default: iPhone
