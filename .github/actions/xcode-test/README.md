@@ -24,6 +24,14 @@ Select the desired Xcode before invoking the action, using `DEVELOPER_DIR` or
 `xcode-select`. Run from the directory containing the project or Swift package;
 omitting `project` leaves project/workspace discovery to `xcodebuild`.
 
+Keep `action.yml`, `run.py`, `simulators.py`, and `utils.py` together when
+copying the action.
+`run.py` validates inputs, chooses the macOS destination or calls the simulator
+selector, boots the selected simulator, and runs `xcodebuild test`.
+`simulators.py` owns simulator inventory, device and OS matching, runtime
+downloads, and device creation. `utils.py` contains the shared command runner
+and numeric version parser. These files use only Python's standard library.
+
 | Input | Required | Meaning |
 | --- | --- | --- |
 | `device` | Yes | Case-insensitive simulator name prefix, exact `udid`/`deviceTypeIdentifier`, or case-insensitive `mac`/`macos`. |
@@ -66,22 +74,27 @@ nonnumeric value. Only these exact aliases select macOS; names such as
 
 For simulator destinations:
 
-1. Query `xcrun simctl list --json`. Find the highest numeric installed OS
-   version where a matching device is available or can be created. Restrict
-   versions to the `os` prefix when supplied; otherwise consider all versions.
-2. Reuse a matching available device at that version, or create one with a
-   supported device type. Prefer reuse at the same version. Runtime identifier,
-   device name, and UDID provide deterministic tie-breaking. No download is needed.
-3. If no suitable installed runtime exists, resolve the version prefix against
+1. `simulators.py` queries `xcrun simctl list --json` for runtimes, device types,
+   and devices. It filters available runtimes by the literal `os` prefix (or
+   accepts every version when `os` is empty), then visits them in descending
+   numeric version order. At each runtime it looks first for an available
+   device matching the case-insensitive name prefix, exact type identifier, or
+   exact UUID. If none exists, it checks whether Xcode lists a matching device
+   type as supported by that runtime and within its version range. It reuses
+   the device or creates that type on the first usable runtime. An existing
+   device wins over creation at the same runtime; a newer creatable runtime
+   wins over an older existing device. Name, UDID, and runtime identifier
+   provide deterministic tie-breaking. No download is needed.
+2. If no suitable installed runtime exists, resolve the version prefix against
    [Apple's simulator catalog](https://devimages-cdn.apple.com/downloads/xcode/simulators/index2.dvtdownloadableindex).
    Filter by device platform, device version range, host architecture, and the
    catalog's Xcode/macOS requirements. Choose the highest version; prefer final
    releases over prereleases at that version, then the last catalog entry.
    Download and install that build using `xcodebuild -downloadPlatform
    <platform> -buildVersion <build> -architectureVariant <variant>`.
-4. Query again and reuse or create a device. Run `xcrun simctl bootstatus
+3. Query again and reuse or create a device. Run `xcrun simctl bootstatus
    <udid> -b` to boot it if needed and wait for startup to complete.
-5. Run `xcodebuild test -scheme <scheme> -destination id=<udid>`, adding
+4. Run `xcodebuild test -scheme <scheme> -destination id=<udid>`, adding
    `-project` only when provided and disabling parallel testing only when
    `disableParallelization` is true.
 

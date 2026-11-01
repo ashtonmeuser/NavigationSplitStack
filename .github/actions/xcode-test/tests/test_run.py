@@ -5,10 +5,15 @@ import os
 from pathlib import Path
 import plistlib
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import call, patch
 
+
+sys.path.insert(0, str(Path(__file__).parents[1]))
+import simulators
+import utils
 
 spec = importlib.util.spec_from_file_location("action", Path(__file__).parents[1] / "run.py")
 action = importlib.util.module_from_spec(spec)
@@ -47,18 +52,18 @@ class SelectionTests(unittest.TestCase):
     def test_all_three_device_selectors(self):
         for query in ("iPhone", TYPE, UDID):
             with self.subTest(query=query):
-                self.assertEqual(action.existing(inventory(), query, "27")[0]["udid"], UDID)
+                self.assertEqual(simulators.installed_choice(inventory(), query, "27")[1]["udid"], UDID)
 
     def test_identifiers_are_exact_and_names_are_case_insensitive_prefixes(self):
         for query in (TYPE[:-1], TYPE.lower(), UDID[:-1], "Phone", "iPad Pro"):
             with self.subTest(query=query):
-                self.assertIsNone(action.existing(inventory(), query, "27"))
+                self.assertIsNone(simulators.installed_choice(inventory(), query, "27"))
         for query in ("iphone", "IPHONE 17", "iPhOnE"):
             with self.subTest(query=query):
-                self.assertEqual(action.existing(inventory(), query, "27")[0]["udid"], UDID)
-                self.assertEqual(action.creatable(inventory(), query, "27")[0]["identifier"], TYPE)
-        self.assertFalse(action.matches({"name": "iPad Air 11-inch (M4)"}, "iPad Pro"))
-        self.assertTrue(action.matches({"name": "iPad Pro 13-inch (M5)"}, "iPad Pro"))
+                self.assertEqual(simulators.installed_choice(inventory(), query, "27")[1]["udid"], UDID)
+                self.assertEqual(simulators.candidate_types(inventory(), query)[0]["identifier"], TYPE)
+        self.assertFalse(simulators.matches({"name": "iPad Air 11-inch (M4)"}, "iPad Pro"))
+        self.assertTrue(simulators.matches({"name": "iPad Pro 13-inch (M5)"}, "iPad Pro"))
 
     def test_numeric_runtime_order_and_literal_os_prefix(self):
         data = inventory()
@@ -66,21 +71,21 @@ class SelectionTests(unittest.TestCase):
             r = runtime(v)
             data["runtimes"].append(r)
             data["devices"][r["identifier"]] = copy.deepcopy(next(iter(data["devices"].values())))
-        self.assertEqual(action.existing(data, "iPhone", "27")[1]["version"], "27.10")
-        self.assertEqual(action.existing(data, "iPhone", "27.0")[1]["version"], "27.0")
-        self.assertIsNone(action.existing(data, "iPhone", "26"))
+        self.assertEqual(simulators.installed_choice(data, "iPhone", "27")[2]["version"], "27.10")
+        self.assertEqual(simulators.installed_choice(data, "iPhone", "27.0")[2]["version"], "27.0")
+        self.assertIsNone(simulators.installed_choice(data, "iPhone", "26"))
 
     def test_unavailable_devices_and_runtimes_are_excluded(self):
         data = inventory()
         data["runtimes"][0]["isAvailable"] = False
-        self.assertIsNone(action.existing(data, "iPhone", "27"))
+        self.assertIsNone(simulators.installed_choice(data, "iPhone", "27"))
         data["runtimes"][0]["isAvailable"] = True
         next(iter(data["devices"].values()))[0]["isAvailable"] = False
-        self.assertIsNone(action.existing(data, "iPhone", "27"))
+        self.assertEqual(simulators.installed_choice(data, "iPhone", "27")[0], "type")
 
     def test_reuse_does_not_download_or_create(self):
-        with patch.object(action, "inventory", return_value=inventory()), patch.object(action, "command") as cmd:
-            self.assertEqual(action.select("iPhone", "27")[0]["udid"], UDID)
+        with patch.object(simulators, "inventory", return_value=inventory()), patch.object(simulators, "command") as cmd:
+            self.assertEqual(simulators.select("iPhone", "27")[0]["udid"], UDID)
             cmd.assert_not_called()
 
     def test_newest_existing_device_with_empty_or_partial_os(self):
@@ -91,9 +96,9 @@ class SelectionTests(unittest.TestCase):
         for r in (older, newer):
             data["devices"][r["identifier"]] = copy.deepcopy(data["devices"][runtime()["identifier"]])
         for os_prefix, expected in (("", "28.0"), ("27", "27.2"), ("27.0", "27.0.1")):
-            with self.subTest(os=os_prefix), patch.object(action, "inventory", return_value=data), \
-                 patch.object(action, "command") as cmd:
-                self.assertEqual(action.select("iPhone", os_prefix)[1]["version"], expected)
+            with self.subTest(os=os_prefix), patch.object(simulators, "inventory", return_value=data), \
+                 patch.object(simulators, "command") as cmd:
+                self.assertEqual(simulators.select("iPhone", os_prefix)[1]["version"], expected)
                 cmd.assert_not_called()
 
     def test_newer_runtime_beats_existing_device_on_older_runtime(self):
@@ -104,9 +109,9 @@ class SelectionTests(unittest.TestCase):
         for os_prefix in ("", "27"):
             for query in ("iPhone", TYPE):
                 with self.subTest(os=os_prefix, query=query), \
-                     patch.object(action, "inventory", return_value=data), \
-                     patch.object(action, "command", return_value=NEW_UDID.encode()) as cmd:
-                    device, selected = action.select(query, os_prefix)
+                     patch.object(simulators, "inventory", return_value=data), \
+                     patch.object(simulators, "command", return_value=NEW_UDID.encode()) as cmd:
+                    device, selected = simulators.select(query, os_prefix)
                     self.assertEqual((device["udid"], selected["version"]), (NEW_UDID, "27.2"))
                     cmd.assert_called_once_with("xcrun", "simctl", "create", "iPhone 17", TYPE,
                                                 runtime()["identifier"], capture=True)
@@ -116,46 +121,49 @@ class SelectionTests(unittest.TestCase):
         incompatible = runtime("28.0")
         incompatible["supportedDeviceTypes"] = []
         data["runtimes"].extend([incompatible, runtime("29.0", available=False)])
-        with patch.object(action, "inventory", return_value=data), patch.object(action, "command") as cmd:
-            self.assertEqual(action.select(TYPE, "")[1]["version"], "27.2")
+        with patch.object(simulators, "inventory", return_value=data), patch.object(simulators, "command") as cmd:
+            self.assertEqual(simulators.select(TYPE, "")[1]["version"], "27.2")
             cmd.assert_not_called()
 
     def test_uuid_with_empty_os_keeps_original_runtime(self):
         data = inventory()
         data["runtimes"].append(runtime("28.0"))
-        with patch.object(action, "inventory", return_value=data), patch.object(action, "command") as cmd:
-            self.assertEqual(action.select(UDID, "")[1]["version"], "27.2")
+        with patch.object(simulators, "inventory", return_value=data), patch.object(simulators, "command") as cmd:
+            self.assertEqual(simulators.select(UDID, "")[1]["version"], "27.2")
             cmd.assert_not_called()
 
     def test_create_from_installed_runtime_without_download(self):
         data = inventory()
         data["devices"] = {}
-        with patch.object(action, "inventory", return_value=data), patch.object(action, "command", return_value=NEW_UDID.encode()) as cmd:
-            self.assertEqual(action.select(TYPE, "27")[0]["udid"], NEW_UDID)
+        with patch.object(simulators, "inventory", return_value=data), patch.object(simulators, "command", return_value=NEW_UDID.encode()) as cmd:
+            self.assertEqual(simulators.select(TYPE, "27")[0]["udid"], NEW_UDID)
             cmd.assert_called_once_with("xcrun", "simctl", "create", "iPhone 17", TYPE,
                                         runtime()["identifier"], capture=True)
 
     def test_creation_requires_runtime_support_for_device_type(self):
         data = inventory()
+        data["devices"] = {}
         data["runtimes"][0]["supportedDeviceTypes"] = []
-        self.assertIsNone(action.creatable(data, "iPhone", "27"))
+        self.assertIsNone(simulators.installed_choice(data, "iPhone", "27"))
 
     def test_uuid_never_creates_replacement(self):
-        self.assertIsNone(action.creatable(inventory(), UDID, "27"))
+        data = inventory()
+        data["devices"][runtime()["identifier"]][0]["isAvailable"] = False
+        self.assertIsNone(simulators.installed_choice(data, UDID, "27"))
         with self.assertRaisesRegex(ValueError, "exact UDID"):
-            action.pinned_runtime(inventory(), NEW_UDID, "27")
+            simulators.pinned_runtime(inventory(), NEW_UDID, "27")
         with self.assertRaisesRegex(ValueError, "does not match"):
-            action.pinned_runtime(inventory(), UDID, "26")
+            simulators.pinned_runtime(inventory(), UDID, "26")
 
     def test_uuid_with_removed_runtime(self):
         data = inventory()
         data["runtimes"] = []
-        self.assertEqual(action.pinned_runtime(data, UDID, "27")["version"], "27.2")
+        self.assertEqual(simulators.pinned_runtime(data, UDID, "27")["version"], "27.2")
 
 
 class DownloadTests(unittest.TestCase):
     def choose(self, items, **kwargs):
-        return action.download_candidate({"downloadables": items}, inventory()["devicetypes"],
+        return simulators.download_candidate({"downloadables": items}, inventory()["devicetypes"],
                                          "27", "arm64", "27.1", "27.0", **kwargs)[1]
 
     def test_catalog_prefix_resolution_prefers_latest_version_and_final_release(self):
@@ -169,11 +177,11 @@ class DownloadTests(unittest.TestCase):
         before["devices"] = {}
         catalog = {"downloadables": [downloadable("27.0.1", "24A1"), downloadable("27.2"),
                                      downloadable("28.0", hostRequirements={"minXcodeVersion": "28.0"})]}
-        with patch.object(action, "inventory", side_effect=[before, inventory()]), \
-             patch.object(action, "command", side_effect=[plistlib.dumps(catalog), b"Xcode 27.1\n", None]) as cmd, \
-             patch.object(action.platform, "machine", return_value="arm64"), \
-             patch.object(action.platform, "mac_ver", return_value=("27.0", (), "")):
-            self.assertEqual(action.select("iPhone", "")[1]["version"], "27.2")
+        with patch.object(simulators, "inventory", side_effect=[before, inventory()]), \
+             patch.object(simulators, "command", side_effect=[plistlib.dumps(catalog), b"Xcode 27.1\n", None]) as cmd, \
+             patch.object(simulators.platform, "machine", return_value="arm64"), \
+             patch.object(simulators.platform, "mac_ver", return_value=("27.0", (), "")):
+            self.assertEqual(simulators.select("iPhone", "")[1]["version"], "27.2")
             cmd.assert_any_call("xcodebuild", "-downloadPlatform", "iOS", "-buildVersion", "24B100",
                                 "-architectureVariant", "arm64")
 
@@ -186,7 +194,7 @@ class DownloadTests(unittest.TestCase):
             downloadable(hostRequirements={"maxXcodeVersion": "27.0"}),
             downloadable(hostRequirements={"minHostVersion": "28.0"}),
         ]), good)
-        self.assertFalse(action.supports_version(inventory()["devicetypes"][0], "18.0"))
+        self.assertFalse(simulators.supports_version(inventory()["devicetypes"][0], "18.0"))
 
     def test_no_catalog_match_fails(self):
         with self.assertRaisesRegex(ValueError, "No downloadable"):
@@ -205,26 +213,40 @@ class DownloadTests(unittest.TestCase):
                 return plistlib.dumps({"downloadables": [downloadable()]})
             if args == ("xcodebuild", "-version"):
                 return b"Xcode 27.1\nBuild version 18B1\n"
-        with patch.object(action, "inventory", side_effect=[before, inventory()]), \
-             patch.object(action, "command", side_effect=command) as cmd, \
-             patch.object(action.platform, "machine", return_value="arm64"), \
-             patch.object(action.platform, "mac_ver", return_value=("27.0", (), "")):
-            self.assertEqual(action.select("iPhone", "27")[0]["udid"], UDID)
+        with patch.object(simulators, "inventory", side_effect=[before, inventory()]), \
+             patch.object(simulators, "command", side_effect=command) as cmd, \
+             patch.object(simulators.platform, "machine", return_value="arm64"), \
+             patch.object(simulators.platform, "mac_ver", return_value=("27.0", (), "")):
+            self.assertEqual(simulators.select("iPhone", "27")[0]["udid"], UDID)
             cmd.assert_any_call("xcodebuild", "-downloadPlatform", "iOS", "-buildVersion", "24B100",
                                 "-architectureVariant", "arm64")
+
+    def test_removed_runtime_is_reinstalled_for_exact_uuid(self):
+        before = inventory()
+        before["runtimes"] = []
+        catalog = {"downloadables": [downloadable("27.0"), downloadable("27.2")]}
+        with patch.object(simulators, "inventory", side_effect=[before, inventory()]), \
+             patch.object(simulators, "command", side_effect=[plistlib.dumps(catalog), b"Xcode 27.1\n", None]) as cmd, \
+             patch.object(simulators.platform, "machine", return_value="arm64"), \
+             patch.object(simulators.platform, "mac_ver", return_value=("27.0", (), "")):
+            device, selected = simulators.select(UDID, "")
+            self.assertEqual((device["udid"], selected["version"]), (UDID, "27.2"))
+            cmd.assert_any_call("xcodebuild", "-downloadPlatform", "iOS", "-buildVersion", "24B100",
+                                "-architectureVariant", "arm64")
+            self.assertFalse(any(c.args[:3] == ("xcrun", "simctl", "create") for c in cmd.call_args_list))
 
     def test_failed_download_stops_without_creation(self):
         before = inventory()
         before["runtimes"] = []
         before["devices"] = {}
-        with patch.object(action, "inventory", return_value=before), \
-             patch.object(action, "command", side_effect=[
+        with patch.object(simulators, "inventory", return_value=before), \
+             patch.object(simulators, "command", side_effect=[
                  plistlib.dumps({"downloadables": [downloadable()]}), b"Xcode 27.1\n",
                  subprocess.CalledProcessError(70, "xcodebuild")]), \
-             patch.object(action.platform, "machine", return_value="arm64"), \
-             patch.object(action.platform, "mac_ver", return_value=("27.0", (), "")):
+             patch.object(simulators.platform, "machine", return_value="arm64"), \
+             patch.object(simulators.platform, "mac_ver", return_value=("27.0", (), "")):
             with self.assertRaises(subprocess.CalledProcessError):
-                action.select("iPhone", "27")
+                simulators.select("iPhone", "27")
 
 
 class CommandTests(unittest.TestCase):
@@ -392,9 +414,9 @@ class CommandTests(unittest.TestCase):
             cmd.assert_not_called()
 
     def test_xcodebuild_failure_is_not_swallowed(self):
-        with patch.object(action.subprocess, "run", side_effect=subprocess.CalledProcessError(65, "xcodebuild")):
+        with patch.object(utils.subprocess, "run", side_effect=subprocess.CalledProcessError(65, "xcodebuild")):
             with self.assertRaises(subprocess.CalledProcessError) as error:
-                action.command("xcodebuild", "test")
+                utils.command("xcodebuild", "test")
             self.assertEqual(error.exception.returncode, 65)
 
 
