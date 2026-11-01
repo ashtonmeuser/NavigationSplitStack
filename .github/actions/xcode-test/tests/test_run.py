@@ -48,10 +48,14 @@ class SelectionTests(unittest.TestCase):
             with self.subTest(query=query):
                 self.assertEqual(action.existing(inventory(), query, "27")[0]["udid"], UDID)
 
-    def test_identifiers_are_exact_and_names_are_case_sensitive_prefixes(self):
-        for query in (TYPE[:-1], UDID[:-1], "Phone", "iphone", "iPad Pro"):
+    def test_identifiers_are_exact_and_names_are_case_insensitive_prefixes(self):
+        for query in (TYPE[:-1], TYPE.lower(), UDID[:-1], "Phone", "iPad Pro"):
             with self.subTest(query=query):
                 self.assertIsNone(action.existing(inventory(), query, "27"))
+        for query in ("iphone", "IPHONE 17", "iPhOnE"):
+            with self.subTest(query=query):
+                self.assertEqual(action.existing(inventory(), query, "27")[0]["udid"], UDID)
+                self.assertEqual(action.creatable(inventory(), query, "27")[0]["identifier"], TYPE)
         self.assertFalse(action.matches({"name": "iPad Air 11-inch (M4)"}, "iPad Pro"))
         self.assertTrue(action.matches({"name": "iPad Pro 13-inch (M5)"}, "iPad Pro"))
 
