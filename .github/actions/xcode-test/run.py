@@ -210,6 +210,11 @@ def prepare_result_bundle():
     return path
 
 
+def source_packages_path():
+    return str(Path(os.environ.get("RUNNER_TEMP") or tempfile.gettempdir()).resolve()
+               / "xcode-test-source-packages")
+
+
 def main():
     if sys.platform != "darwin":
         raise ValueError("This action requires a macOS runner with Xcode selected.")
@@ -241,6 +246,7 @@ def main():
     args = ["xcodebuild", "test", "-scheme", scheme, "-destination", destination]
     if project:
         args.extend(["-project", project])
+    args.extend(["-clonedSourcePackagesDirPath", source_packages_path()])
     if disable_parallelization == "true":
         args.extend(["-parallel-testing-enabled", "NO"])
     args.extend(["-resultBundlePath", prepare_result_bundle()])

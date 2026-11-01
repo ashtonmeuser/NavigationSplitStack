@@ -33,6 +33,11 @@ on:
         type: boolean
         required: false
         default: false
+      cache:
+        description: Cache Swift package checkouts between successful runs
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -54,6 +59,7 @@ jobs:
           project: ${{ inputs.project }}
           ad-hoc-signing: ${{ inputs.ad-hoc-signing }}
           disableParallelization: ${{ inputs.disableParallelization }}
+          cache: ${{ inputs.cache }}
       - name: Upload failed test results
         if: ${{ failure() && steps.xcode-test.outputs.result-bundle-path != '' }}
         uses: actions/upload-artifact@v7
