@@ -1,8 +1,9 @@
 # Xcode tests
 
-A standalone composite action with five inputs. Device and scheme are required;
+A standalone composite action with six inputs. Device and scheme are required;
 OS version and project are optional. OS version is ignored for macOS.
 Local ad-hoc signing is enabled by default and can be disabled.
+Test parallelization follows the scheme by default and can be disabled.
 Copy this directory into another repository, or put its contents at the root of
 a dedicated action repository. It needs macOS, a selected and initialized Xcode,
 Python 3, and curl. It uses only Python's standard library.
@@ -30,6 +31,7 @@ omitting `project` leaves project/workspace discovery to `xcodebuild`.
 | `scheme` | Yes | Shared scheme containing the tests to run. |
 | `project` | No | `.xcodeproj` path relative to the working directory. |
 | `ad-hoc-signing` | No | `true` (default) adds local ad-hoc signing overrides; `false` preserves project signing settings. |
+| `disableParallelization` | No | `false` (default) uses the scheme setting; `true` passes `-parallel-testing-enabled NO`. |
 
 `iPhone` matches `iPhone 17` and `iPhone 18 Pro Max`. `iPad Pro` matches
 `iPad Pro 13-inch (M5)`; use `iPad` to also match `iPad Air 11-inch (M4)`.
@@ -76,8 +78,11 @@ For simulator destinations:
    releases over prereleases at that version, then the last catalog entry.
    Download and install that build using `xcodebuild -downloadPlatform
    <platform> -buildVersion <build> -architectureVariant <variant>`.
-4. Query again, reuse or create a device, and run `xcodebuild test -scheme
-   <scheme> -destination id=<udid>`, adding `-project` only when provided.
+4. Query again and reuse or create a device. Run `xcrun simctl bootstatus
+   <udid> -b` to boot it if needed and wait for startup to complete.
+5. Run `xcodebuild test -scheme <scheme> -destination id=<udid>`, adding
+   `-project` only when provided and disabling parallel testing only when
+   `disableParallelization` is true.
 
 A UUID pins the existing device and its OS version, even when `os` is omitted.
 An unknown UUID or a mismatch with a supplied OS prefix fails.
@@ -86,7 +91,8 @@ that version and reuse the same UUID; it never creates a replacement UUID.
 
 The platform is inferred from Xcode's device type metadata: iOS, tvOS, watchOS,
 or visionOS. This action does not configure watch/phone pairing.
-Xcode handles booting the test destination. Existing devices and newly
+The action boots the selected simulator before testing; macOS destinations skip
+this step. Existing devices and newly
 installed runtimes/devices remain on the runner after the action.
 
 Apple's catalog is an external dependency with no guaranteed public schema.
@@ -99,6 +105,24 @@ The installation command follows Apple's
 [Xcode component documentation](https://developer.apple.com/documentation/xcode/downloading-and-installing-additional-xcode-components).
 Inputs are passed through environment variables and subprocess argument arrays,
 so spaces and shell metacharacters remain literal.
+
+## Simulator startup and parallel testing
+
+The action waits for the selected simulator to finish booting before starting
+`xcodebuild`. This also works when the simulator is already running. Boot output
+is streamed to the job log, and a boot failure stops the action before testing.
+No Simulator GUI or fixed sleep is needed.
+
+`disableParallelization: 'true'` explicitly disables test parallelization,
+including when it is enabled in the scheme. This matches the repository's
+existing CI and avoids additional parallel test workers on a constrained runner.
+The default, `'false'`, leaves the scheme setting in effect. When parallel
+testing is enabled, Xcode may create simulator clones; the action only preboots
+the selected device, not those later clones.
+
+Prebooting removes simulator startup from the test-launch path, but does not
+guarantee that application launches cannot time out. Tests still install and
+launch the app normally.
 
 ## Signing and test results
 
@@ -150,7 +174,7 @@ Bundles remain on disk after the action; uploading is not part of the composite.
 ### Manual GitHub run
 
 This repository includes a [manual test workflow](../../workflows/test-xcode-action.yml)
-with fields for all five action inputs. It uses the `xcode-27` runner and its
+with fields for all six action inputs. It uses the `xcode-27` runner and its
 default Xcode selection.
 
 GitHub requires the wrapper workflow to exist on the default branch to expose
@@ -165,6 +189,8 @@ being tested; the action implementation can remain on the test branch.
    `Examples/Examples.xcodeproj`. Clear `project` to test project auto-discovery.
    Leave `ad-hoc-signing` checked for local ad-hoc signing, or uncheck it to use
    the project's signing settings.
+   Check `disableParallelization` to run tests serially, or leave it unchecked
+   to use the scheme's setting.
 5. Select **Run workflow** and inspect the **Run local Xcode action** step.
 
 Checkout uses the selected branch, so the local action runs that branch's code.
@@ -180,5 +206,6 @@ python3 -m unittest discover -s .github/actions/xcode-test/tests -v
 ```
 
 Tests cover selection, unavailable runtimes, exact identifiers, provisioning,
-catalog filtering, signing overrides, result outputs, and command failures without downloading
+catalog filtering, signing overrides, parallelization, simulator boot ordering,
+result outputs, and command failures without downloading
 runtimes or changing the simulator inventory.

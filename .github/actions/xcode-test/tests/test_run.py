@@ -7,7 +7,7 @@ import plistlib
 import subprocess
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 
 spec = importlib.util.spec_from_file_location("action", Path(__file__).parents[1] / "run.py")
@@ -227,7 +227,7 @@ class CommandTests(unittest.TestCase):
         results = patch.object(action, "prepare_result_bundle", return_value=RESULT_PATH)
         results.start()
         self.addCleanup(results.stop)
-        environment = patch.dict(os.environ, {"TEST_AD_HOC_SIGNING": "true"})
+        environment = patch.dict(os.environ, {"TEST_AD_HOC_SIGNING": "true", "TEST_DISABLE_PARALLELIZATION": "false"})
         environment.start()
         self.addCleanup(environment.stop)
 
@@ -275,7 +275,10 @@ class CommandTests(unittest.TestCase):
                     os.environ["TEST_OS"] = os_version
                 action.main()
                 select.assert_called_once_with("iPhone", "")
-                cmd.assert_called_once_with("xcodebuild", "test", "-scheme", "App", "-destination", f"id={UDID}", *TEST_ARGS)
+                self.assertEqual(cmd.call_args_list, [
+                    call("xcrun", "simctl", "bootstatus", UDID, "-b"),
+                    call("xcodebuild", "test", "-scheme", "App", "-destination", f"id={UDID}", *TEST_ARGS),
+                ])
 
     def test_simulators_reject_invalid_nonempty_os(self):
         for os_version in ("ignored", "27.x", " "):
@@ -300,7 +303,55 @@ class CommandTests(unittest.TestCase):
                 if project:
                     expected += ["-project", project]
                 expected += TEST_ARGS
-                cmd.assert_called_once_with(*expected)
+                self.assertEqual(cmd.call_args_list, [
+                    call("xcrun", "simctl", "bootstatus", UDID, "-b"), call(*expected),
+                ])
+
+    def test_parallel_testing_toggle_and_boot_order(self):
+        for query in ("mac", "iPhone"):
+            for enabled, value in ((None, False), ("false", False), ("true", True), ("TRUE", True)):
+                for state in ("Shutdown", "Booted"):
+                    with self.subTest(query=query, parallel=enabled, state=state), \
+                         patch.dict(os.environ, {"TEST_DEVICE": query, "TEST_SCHEME": "App"}, clear=True), \
+                         patch.object(action.sys, "platform", "darwin"), \
+                         patch.object(action, "select", return_value=({"name": "iPhone 17", "udid": UDID, "state": state}, runtime())), \
+                         patch.object(action, "command") as cmd, patch("builtins.print"):
+                        if enabled is not None:
+                            os.environ["TEST_DISABLE_PARALLELIZATION"] = enabled
+                        action.main()
+                        args = cmd.call_args.args
+                        self.assertEqual("-parallel-testing-enabled" in args, value)
+                        if value:
+                            self.assertEqual(args[args.index("-parallel-testing-enabled") + 1], "NO")
+                        if query == "mac":
+                            self.assertEqual(cmd.call_count, 1)
+                        else:
+                            self.assertEqual(cmd.call_count, 2)
+                            self.assertEqual(cmd.call_args_list[0], call("xcrun", "simctl", "bootstatus", UDID, "-b"))
+                        self.assertEqual(args[:2], ("xcodebuild", "test"))
+
+    def test_invalid_parallel_toggle_fails_before_provisioning(self):
+        for value in ("", "yes", "0"):
+            with self.subTest(value=value), \
+                 patch.dict(os.environ, {"TEST_DEVICE": "iPhone", "TEST_SCHEME": "App", "TEST_DISABLE_PARALLELIZATION": value}, clear=True), \
+                 patch.object(action.sys, "platform", "darwin"), \
+                 patch.object(action, "select") as select, patch.object(action, "command") as cmd:
+                with self.assertRaisesRegex(ValueError, "disableParallelization must be true or false"):
+                    action.main()
+                select.assert_not_called()
+                cmd.assert_not_called()
+
+    def test_boot_failure_stops_before_xcodebuild(self):
+        with patch.dict(os.environ, {"TEST_DEVICE": "iPhone", "TEST_SCHEME": "App"}, clear=True), \
+             patch.object(action.sys, "platform", "darwin"), \
+             patch.object(action, "select", return_value=({"name": "iPhone 17", "udid": UDID}, runtime())), \
+             patch.object(action, "prepare_result_bundle") as results, \
+             patch.object(action, "command", side_effect=subprocess.CalledProcessError(149, "simctl")) as cmd:
+            with self.assertRaises(subprocess.CalledProcessError) as error:
+                action.main()
+            self.assertEqual(error.exception.returncode, 149)
+            cmd.assert_called_once_with("xcrun", "simctl", "bootstatus", UDID, "-b")
+            results.assert_not_called()
 
     def test_ad_hoc_signing_can_be_disabled_on_mac_and_simulators(self):
         for query in ("mac", "iPhone"):
