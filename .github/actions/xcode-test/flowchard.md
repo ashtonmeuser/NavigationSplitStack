@@ -23,17 +23,14 @@ flowchart TD
     A["Validate runner and inputs"] --> B{"device is exactly mac or macos<br/>ignoring case?"}
     B -- Yes --> M["Use destination platform=macOS<br/>Ignore OS input"]
     B -- No --> I["Query simctl inventory"]
-    I --> S[["Run installed_choice<br/>See runtime selection below"]]
+    I --> PIN["Validate UUID if supplied<br/>Pin runtime identifier and any known build"]
+    PIN --> S[["Run installed_choice<br/>See runtime selection below"]]
     S --> R{"Selection result?"}
     R -- Device --> U["Reuse selected device"]
     R -- Type --> C["Create selected type on selected runtime<br/>Validate returned UDID"]
-    R -- None --> DL[["Resolve and install a runtime<br/>See download flow below"]]
-    DL --> RI["Query simctl inventory again"]
-    RI --> S2[["Run the same installed_choice"]]
-    S2 --> R2{"Selection result?"}
-    R2 -- Device --> U
-    R2 -- Type --> C
-    R2 -- None --> E["Fail: no usable simulator after installation"]
+    R -- None --> DL[["Try eligible builds until a usable choice is found<br/>See download flow below"]]
+    DL -- Device --> U
+    DL -- Type --> C
     U --> DEST["Use destination id=UDID"]
     C --> DEST
     DEST --> BOOT["Boot device and wait for startup<br/>simctl bootstatus UDID -b"]
@@ -56,7 +53,7 @@ prefix. An empty prefix permits all versions. Numeric ordering puts 27.10 above
 
 ```mermaid
 flowchart TD
-    A["Filter installed runtimes by availability and OS prefix<br/>Sort by numeric version, newest first"] --> B{"Any unexamined runtimes left?"}
+    A["Filter installed runtimes by availability and OS prefix<br/>For UUIDs also require pinned identifier and any known build<br/>Sort by numeric version, newest first"] --> B{"Any unexamined runtimes left?"}
     B -- No --> NONE["Return no match"]
     B -- Yes --> NEXT["Take the next runtime"]
     NEXT --> D{"Available matching device<br/>on this runtime?"}
@@ -81,54 +78,80 @@ Runtime identifiers break ties between equal numeric versions, in descending
 order. Creation requires both membership in the runtime's `supportedDeviceTypes`
 and an OS version within the type's minimum/maximum range.
 
+## UUID validation
+
+UUID validation runs before installed runtime selection. It locates the exact
+existing device and rejects an unknown UUID or a mismatch between its OS and the
+requested prefix. It pins the original runtime identifier and any known build.
+If the runtime record is missing, it extracts the numeric OS version from the
+identifier while preserving a model suffix such as `-iPhone19-4`. An identifier
+whose version cannot be recovered fails with a diagnostic.
+
+An available runtime paired with an unavailable device fails immediately.
+If the runtime is missing or unavailable, downloads must restore the same
+runtime identifier and any known build. The same UUID must become available;
+the action never creates a replacement device. When the build is unknown, it
+can try multiple builds of the original OS version.
+
 ## Download flow
 
 This path runs only when installed runtime selection returns no match. The
 catalog supplies OS runtimes; device types must already be known to the selected
-Xcode. Fetching the catalog and reading the Xcode version happen before the
-platform ambiguity check in the current implementation.
+Xcode. Platform validation now happens before any catalog request.
 
 ```mermaid
 flowchart TD
-    A{"Query is a full UUID?"} -- No --> TYPES["Find candidate device types in Xcode"]
-    A -- Yes --> KNOWN{"Exact UDID exists in inventory?"}
-    KNOWN -- No --> E1["Fail: unknown UDID"]
-    KNOWN -- Yes --> VERSION{"Original runtime version known<br/>or recoverable from its identifier?"}
-    VERSION -- No --> E2["Fail: cannot determine original runtime"]
-    VERSION -- Yes --> PREFIX{"Original OS matches requested prefix?"}
-    PREFIX -- No --> E3["Fail: UUID and OS disagree"]
-    PREFIX -- Yes --> AVAILABLE{"Original runtime is available?"}
-    AVAILABLE -- Yes --> E4["Fail: device unavailable despite usable runtime"]
-    AVAILABLE -- No --> PIN["Pin download to original OS version"]
-    PIN --> TYPES
-    TYPES --> FOUND{"Any candidate types?"}
-    FOUND -- No --> E5["Fail: no matching type in selected Xcode"]
-    FOUND -- Yes --> FETCH["Fetch Apple catalog from CATALOG_URL<br/>Read selected Xcode version"]
-    FETCH --> PLATFORM{"Exactly one recognized platform<br/>among candidate types via PLATFORMS?"}
-    PLATFORM -- No --> E6["Fail: unsupported or ambiguous platform"]
-    PLATFORM -- Yes --> FILTER["Filter catalog by platform, OS prefix, architecture,<br/>device version ranges, Xcode and macOS requirements<br/>Honor pinned OS version for UUIDs"]
-    FILTER --> MATCH{"Any compatible catalog entries?"}
-    MATCH -- No --> E7["Fail: no compatible downloadable runtime"]
-    MATCH -- Yes --> PICK["Choose highest numeric OS version<br/>Prefer final release at that version<br/>Then prefer last catalog entry"]
-    PICK --> DOWNLOAD["Install exact build with xcodebuild -downloadPlatform<br/>Use arm64 variant on arm64, otherwise universal"]
-    DOWNLOAD --> RETURN["Return to overall flow to re-query inventory"]
+    A["Find candidate device types in Xcode"] --> TYPES{"Any matching types?"}
+    TYPES -- No --> E1["Fail: no matching type in selected Xcode"]
+    TYPES -- Yes --> PLATFORM{"Exactly one recognized platform<br/>among candidate types via PLATFORMS?"}
+    PLATFORM -- No --> E2["Fail: unsupported or ambiguous platform"]
+    PLATFORM -- Yes --> SDK["Read selected platform SDK version<br/>and Xcode version"]
+    SDK --> FETCH["Fetch Apple catalog from CATALOG_URL"]
+    FETCH --> FILTER["Filter by platform, OS prefix, device version ranges,<br/>architectures and exclusions, Xcode and macOS bounds<br/>Exclude versions newer than the selected platform SDK<br/>For UUIDs require original OS and any known build"]
+    FILTER --> MATCH{"Any eligible catalog entries?"}
+    MATCH -- No --> E3["Fail: no eligible downloads<br/>Report selected SDK ceiling"]
+    MATCH -- Yes --> RANK["Sort newest OS first, then final releases<br/>Then prefer later catalog entries<br/>Deduplicate build numbers"]
+    RANK --> NEXT{"Another build not already available?"}
+    NEXT -- No --> E4["Fail: no usable simulator after eligible builds"]
+    NEXT -- Yes --> DOWNLOAD["Install exact build with xcodebuild -downloadPlatform<br/>Use arm64 variant on arm64, otherwise universal"]
+    DOWNLOAD --> INVENTORY["Query simctl inventory again"]
+    INVENTORY --> SELECT[["Run the same installed_choice<br/>including UUID identity and build constraints"]]
+    SELECT --> USABLE{"Usable device or creatable type?"}
+    USABLE -- Yes --> RETURN["Return choice to overall flow"]
+    USABLE -- No --> NEXT
 ```
 
 The catalog compatibility check requires the OS version to fit at least one
-candidate type's version range. Runtime support for a particular type is checked
-against `simctl` again after installation. A successful download therefore does
-not guarantee a usable destination; the action fails if the second selection
-still finds none. It does not retry with another catalog entry.
+candidate type's version range. Catalog entries often omit Xcode/macOS bounds
+and device model support, so this check is not proof of compatibility. The
+selected platform SDK provides a conservative upper limit for downloads: an
+Xcode with the iOS 17 SDK cannot select an iOS 27 download merely because catalog
+bounds are absent. Installed runtime selection is not restricted by this ceiling.
+
+After each successful installation, `simctl` must confirm that the runtime is
+available and a matching device is usable or can be created. Different models
+can require different builds of the same version. If one build provides no match,
+the action tries remaining eligible builds, each at most once. Already available
+builds have been rejected by installed selection and are skipped. A download
+command failure stops immediately; it is not swallowed to try another build.
+All installed runtimes remain on the runner, so fallback attempts can use
+additional time and disk space.
+
+Final releases beat prereleases only at the same OS version. A newer beta can
+win over an older final release if it is within the SDK limit. This action does
+not inspect the scheme's platform or deployment target when selecting a
+simulator; `xcodebuild test` reports project-specific destination mismatches.
 
 `PLATFORMS` maps each recognized `productFamily` to the download command's
 platform name and the catalog platform suffix. It is only consulted on the
 download path. Unknown product families contribute no platform; zero or multiple
-distinct recognized platforms cause an error.
+distinct recognized platforms cause an error before fetching the catalog.
 
 | Query with no installed devices or runtimes | Result, assuming Xcode knows the listed types |
 | --- | --- |
-| `iP` | iPad, iPhone, and iPod touch all map to `("iOS", "iphoneos")`. The action can download a compatible iOS runtime, then reuse or create a matching device. Creation chooses the first supported type in name order. |
-| `Apple` | Apple TV, Apple Watch, and Apple Vision map to different platforms. The action fetches the catalog, then fails on platform ambiguity without downloading a runtime. |
+| `iP` | iPad, iPhone, and iPod touch all map to `("iOS", "iphoneos")`. Try eligible iOS builds until a matching device can be reused or created. Creation chooses the first supported type in name order. |
+| `Apple` | Apple TV, Apple Watch, and Apple Vision map to different platforms. Fail on platform ambiguity before fetching the catalog or downloading a runtime. |
+| `iPhone Duo`, OS `27.2` | With a suitable SDK, a general iOS 27.2 build may install but provide no matching type. Continue to the model-specific build and create the device there. |
 
 An ambiguous query may still succeed using installed runtimes, because the
 single-platform requirement is enforced only when selecting a download.

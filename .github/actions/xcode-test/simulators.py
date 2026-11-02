@@ -72,7 +72,7 @@ def supports_version(device_type, os_version):
             <= version(device_type.get("maxRuntimeVersionString", "65535.255.255")))
 
 
-def installed_choice(data, query, os_prefix):
+def installed_choice(data, query, os_prefix, pinned=None):
     """Return (kind, device or type, runtime) for the newest usable runtime.
 
     Reuse an available device before creating one on that runtime. A newer
@@ -81,6 +81,9 @@ def installed_choice(data, query, os_prefix):
     """
     types = [] if UUID.fullmatch(query) else candidate_types(data, query)
     for runtime in matching_runtimes(data, os_prefix):
+        if pinned and (runtime["identifier"] != pinned["identifier"]
+                       or pinned.get("buildversion") and runtime.get("buildversion") != pinned["buildversion"]):
+            continue
         devices = sorted(data["devices"].get(runtime["identifier"], []),
                          key=lambda d: (d["name"], d["udid"]))
         for device in devices:
@@ -94,54 +97,70 @@ def installed_choice(data, query, os_prefix):
 
 
 def pinned_runtime(data, query, os_prefix):
-    """Recover a UUID's original runtime for reinstall, or reject a bad UUID.
+    """Validate a UUID before selection and retain its runtime identity and build.
 
-    The device can remain in simctl's inventory after its runtime record is
-    removed, so derive the version from the runtime identifier when needed.
+    Removed runtime records may leave device records behind. Parse the numeric
+    OS portion of their runtime identifier, preserving any model suffix.
     """
     if not UUID.fullmatch(query):
         return None
-    runtime_id = next((rid for rid, devices in data["devices"].items()
-                       if any(d["udid"] == query for d in devices)), None)
-    if runtime_id is None:
+    found = next(((rid, d) for rid, devices in data["devices"].items()
+                  for d in devices if d["udid"] == query), None)
+    if found is None:
         raise ValueError(f"No simulator has the exact UDID {query}.")
+    runtime_id, device = found
     runtime = next((r for r in data["runtimes"] if r["identifier"] == runtime_id), None)
     if runtime is None:
-        # Removed runtimes may leave devices behind but no runtime record.
-        match = re.fullmatch(r"com\.apple\.CoreSimulator\.SimRuntime\.(iOS|tvOS|watchOS|visionOS|xrOS)-([0-9]+(?:-[0-9]+){0,2})", runtime_id)
+        match = re.fullmatch(
+            r"com\.apple\.CoreSimulator\.SimRuntime\.(iOS|tvOS|watchOS|visionOS|xrOS)-"
+            r"([0-9]+(?:-[0-9]+){0,2})(?:-[A-Za-z][A-Za-z0-9-]*)?", runtime_id,
+        )
         if not match:
             raise ValueError(f"Cannot determine the missing runtime for UDID {query}.")
         runtime = {"version": match[2].replace("-", "."), "identifier": runtime_id}
     if not runtime["version"].startswith(os_prefix):
         raise ValueError(f"UDID {query} uses OS {runtime['version']}, which does not match {os_prefix}.")
-    if runtime.get("isAvailable"):
+    if runtime.get("isAvailable") and not device.get("isAvailable"):
         raise ValueError(f"UDID {query} is unavailable although its runtime is installed.")
     return runtime
 
 
-def download_candidate(catalog, types, os_prefix, architecture, xcode_version, host_version, pinned=None):
-    """Choose the newest compatible catalog runtime for one device platform.
-
-    Filter by literal OS prefix, architecture, device type version range, and
-    catalog host requirements. A pinned UUID permits only its original OS.
-    """
+def device_platform(types):
+    """Resolve one supported download platform before making network requests."""
+    if not types:
+        raise ValueError("No matching device type exists in the selected Xcode.")
     platforms = {PLATFORMS[d["productFamily"]] for d in types if d.get("productFamily") in PLATFORMS}
     if len(platforms) != 1:
         raise ValueError("Device must identify one supported simulator platform.")
-    platform_name, platform_id = platforms.pop()
+    return platforms.pop()
+
+
+def download_candidates(catalog, types, os_prefix, architecture, xcode_version, host_version,
+                        sdk_version, pinned=None):
+    """Rank eligible builds; only simctl can confirm model support after install.
+
+    Catalog entries often omit host requirements. Bound downloads by the
+    selected platform SDK instead of treating those omissions as permission to
+    install arbitrarily newer OS versions. Keep distinct builds at each version
+    because a model-specific runtime may share a version with a general runtime.
+    """
+    platform_name, platform_id = device_platform(types)
     candidates = []
     for item in catalog["downloadables"]:
         sim = item.get("simulatorVersion", {})
         os_version = sim.get("version", "")
+        requirements = item.get("hostRequirements", {})
         if (item.get("platform") != "com.apple.platform." + platform_id
-                or not os_version
+                or not os_version or not sim.get("buildUpdate")
                 or not os_version.startswith(os_prefix)
+                or version(os_version) > version(sdk_version)
                 or architecture not in item.get("architectures", ["arm64", "x86_64"])
+                or architecture in requirements.get("excludedHostArchitectures", [])
                 or not any(supports_version(d, os_version) for d in types)):
             continue
-        if pinned and version(os_version) != version(pinned["version"]):
+        if pinned and (version(os_version) != version(pinned["version"])
+                       or pinned.get("buildversion") and sim["buildUpdate"] != pinned["buildversion"]):
             continue
-        requirements = item.get("hostRequirements", {})
         if any(version(current) < version(requirements.get(low, "0"))
                or version(current) > version(requirements.get(high, "65535"))
                for current, low, high in [
@@ -150,52 +169,66 @@ def download_candidate(catalog, types, os_prefix, architecture, xcode_version, h
                ]):
             continue
         candidates.append(item)
-    if not candidates:
-        raise ValueError(f"No downloadable {platform_name} runtime matches OS {os_prefix} and this device/host.")
-    # Prefer final releases at the same OS version, then newer catalog entries.
+    # Prefer final releases at the same version, then later catalog entries.
     candidates.sort(key=lambda d: (version(d["simulatorVersion"]["version"]),
-                                   not re.search(r"beta|candidate", d["name"], re.I)))
-    return platform_name, candidates[-1]
+                                   not re.search(r"beta|candidate|\bRC\b", d["name"], re.I)))
+    builds = {}
+    for item in reversed(candidates):
+        builds.setdefault(item["simulatorVersion"]["buildUpdate"], item)
+    if not builds:
+        raise ValueError(f"No downloadable {platform_name} runtime matches OS {os_prefix!r}, "
+                         f"the device/host, and selected SDK {sdk_version}. Select a newer Xcode if needed.")
+    return list(builds.values())
+
+
+def download_choice(data, query, os_prefix, pinned=None):
+    """Try eligible builds until the refreshed inventory contains a usable choice.
+
+    Skip already available builds: installed_choice has already rejected them.
+    Failed download commands stop immediately; only successful installations
+    with no usable match advance to another build. Each build is tried once.
+    """
+    types = candidate_types(data, query)
+    platform_name, platform_id = device_platform(types)
+    sdk_version = command("xcrun", "--sdk", platform_id, "--show-sdk-version", capture=True).decode().strip()
+    xcode = command("xcodebuild", "-version", capture=True).decode()
+    xcode_match = re.search(r"^Xcode ([0-9.]+)", xcode, re.M)
+    if not xcode_match:
+        raise ValueError("Cannot determine the selected Xcode version.")
+    catalog = plistlib.loads(command("curl", "--fail", "--silent", "--show-error", "--location",
+                                    "--retry", "3", "--max-time", "120", CATALOG_URL, capture=True))
+    items = download_candidates(catalog, types, os_prefix, platform.machine(),
+                                xcode_match[1], platform.mac_ver()[0], sdk_version, pinned)
+    available_builds = {r.get("buildversion") for r in data["runtimes"] if r.get("isAvailable")}
+    for item in items:
+        build = item["simulatorVersion"]["buildUpdate"]
+        if build in available_builds:
+            continue
+        print(f"Installing {item['name']} (build {build})", flush=True)
+        command("xcodebuild", "-downloadPlatform", platform_name, "-buildVersion", build,
+                "-architectureVariant", "arm64" if platform.machine() == "arm64" else "universal")
+        data = inventory()
+        choice = installed_choice(data, query, os_prefix, pinned)
+        if choice:
+            return choice
+        available_builds.update(r.get("buildversion") for r in data["runtimes"] if r.get("isAvailable"))
+        print(f"Build {build} provided no usable match; checking remaining eligible builds.", flush=True)
+    raise ValueError(f"No usable simulator matches {query!r} and OS {os_prefix!r} after trying eligible builds. "
+                     "Check the selected Xcode, host OS, and device support.")
 
 
 def select(query, os_prefix):
-    """Reuse or create a simulator, downloading a runtime only when required.
-
-    Return (device, runtime) for run.py. Re-query simctl after installation
-    because the download can add a runtime and devices to the inventory.
-    """
+    """Validate UUID identity, resolve a destination, then reuse or create it."""
     data = inventory()
-    choice = installed_choice(data, query, os_prefix)
-    if choice and choice[0] == "device":
-        return choice[1:]
     pinned = pinned_runtime(data, query, os_prefix)
+    choice = installed_choice(data, query, os_prefix, pinned)
     if not choice:
-        types = candidate_types(data, query)
-        if not types:
-            raise ValueError(f"No device or device type matches {query!r} in the selected Xcode.")
-        catalog = plistlib.loads(command("curl", "--fail", "--silent", "--show-error", "--location",
-                                        "--retry", "3", "--max-time", "120", CATALOG_URL, capture=True))
-        xcode = command("xcodebuild", "-version", capture=True).decode()
-        xcode_version = re.search(r"^Xcode ([0-9.]+)", xcode, re.M)[1]
-        platform_name, item = download_candidate(
-            catalog, types, os_prefix, platform.machine(), xcode_version, platform.mac_ver()[0], pinned,
-        )
-        print(f"Installing {item['name']}", flush=True)
-        # Resolve the prefix first; -buildVersion itself is not a prefix matcher.
-        command("xcodebuild", "-downloadPlatform", platform_name,
-                "-buildVersion", item["simulatorVersion"]["buildUpdate"],
-                "-architectureVariant", "arm64" if platform.machine() == "arm64" else "universal")
-        data = inventory()
-        choice = installed_choice(data, query, os_prefix)
-        if choice and choice[0] == "device":
-            return choice[1:]
-    if not choice:
-        raise ValueError(f"No usable simulator matches {query!r} and OS {os_prefix} after installation.")
-    _, device_type, runtime = choice
-    udid = command("xcrun", "simctl", "create", device_type["name"], device_type["identifier"],
-                   runtime["identifier"], capture=True).decode().strip()
-    if not UUID.fullmatch(udid):
-        raise ValueError(f"simctl create returned an invalid UDID: {udid!r}")
-    return {"name": device_type["name"], "udid": udid}, runtime
-
-
+        choice = download_choice(data, query, os_prefix, pinned)
+    kind, device, runtime = choice
+    if kind == "type":
+        udid = command("xcrun", "simctl", "create", device["name"], device["identifier"],
+                       runtime["identifier"], capture=True).decode().strip()
+        if not UUID.fullmatch(udid):
+            raise ValueError(f"simctl create returned an invalid UDID: {udid!r}")
+        device = {"name": device["name"], "udid": udid}
+    return device, runtime

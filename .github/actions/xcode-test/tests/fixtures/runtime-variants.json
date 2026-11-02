@@ -1,0 +1,117 @@
+{
+  "devicetypes": [
+    {
+      "name": "iPhone Duo",
+      "identifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-Duo",
+      "productFamily": "iPhone",
+      "minRuntimeVersionString": "27.1.0",
+      "maxRuntimeVersionString": "65535.255.255"
+    },
+    {
+      "name": "iPhone 17",
+      "identifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-17",
+      "productFamily": "iPhone",
+      "minRuntimeVersionString": "26.0.0",
+      "maxRuntimeVersionString": "65535.255.255"
+    },
+    {
+      "name": "iPhone 15",
+      "identifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-15",
+      "productFamily": "iPhone",
+      "minRuntimeVersionString": "17.0.0",
+      "maxRuntimeVersionString": "65535.255.255"
+    },
+    {
+      "name": "iPad (10th generation)",
+      "identifier": "com.apple.CoreSimulator.SimDeviceType.iPad-10th-generation",
+      "productFamily": "iPad",
+      "minRuntimeVersionString": "16.1.0",
+      "maxRuntimeVersionString": "65535.255.255"
+    },
+    {
+      "name": "Apple TV",
+      "identifier": "com.apple.CoreSimulator.SimDeviceType.Apple-TV-1080p",
+      "productFamily": "Apple TV",
+      "minRuntimeVersionString": "9.0.0",
+      "maxRuntimeVersionString": "26.99.0"
+    }
+  ],
+  "runtimes": [
+    {
+      "identifier": "com.apple.CoreSimulator.SimRuntime.iOS-27-2-iPhone19-4",
+      "version": "27.2",
+      "buildversion": "24B91016s",
+      "isAvailable": true,
+      "supportedDeviceTypes": [
+        {
+          "identifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-Duo"
+        }
+      ]
+    },
+    {
+      "identifier": "com.apple.CoreSimulator.SimRuntime.iOS-27-2",
+      "version": "27.2",
+      "buildversion": "24B8117",
+      "isAvailable": true,
+      "supportedDeviceTypes": [
+        {
+          "identifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-17"
+        },
+        {
+          "identifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-15"
+        },
+        {
+          "identifier": "com.apple.CoreSimulator.SimDeviceType.iPad-10th-generation"
+        }
+      ]
+    }
+  ],
+  "catalog": {
+    "downloadables": [
+      {
+        "name": "iOS 17.0 Simulator Runtime",
+        "platform": "com.apple.platform.iphoneos",
+        "simulatorVersion": {
+          "buildUpdate": "21A328",
+          "version": "17.0"
+        }
+      },
+      {
+        "name": "watchOS 6.2.1 Simulator",
+        "platform": "com.apple.platform.watchos",
+        "simulatorVersion": {
+          "buildUpdate": "17T531",
+          "version": "6.2.1"
+        },
+        "hostRequirements": {
+          "excludedHostArchitectures": [
+            "arm64"
+          ],
+          "maxHostVersion": "12.99"
+        }
+      },
+      {
+        "name": "iOS 27.2 Simulator Runtime",
+        "platform": "com.apple.platform.iphoneos",
+        "simulatorVersion": {
+          "buildUpdate": "24B91016s",
+          "version": "27.2"
+        },
+        "architectures": [
+          "arm64"
+        ]
+      },
+      {
+        "name": "iOS 27.2 Simulator Runtime",
+        "platform": "com.apple.platform.iphoneos",
+        "simulatorVersion": {
+          "buildUpdate": "24B8117",
+          "version": "27.2"
+        },
+        "architectures": [
+          "arm64"
+        ]
+      }
+    ]
+  }
+}

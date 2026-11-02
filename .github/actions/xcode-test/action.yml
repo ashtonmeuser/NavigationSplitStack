@@ -5,7 +5,7 @@ inputs:
     description: Case-insensitive simulator name prefix, exact UDID/type identifier, or mac/macos (case insensitive).
     required: true
   os:
-    description: Optional OS version prefix. Selects the newest compatible installed version matching the prefix (any version if omitted), or downloads a match if needed. Ignored for mac/macOS.
+    description: Optional OS version prefix. Selects the newest usable installed match, or tries matching downloads no newer than the selected platform SDK. Empty permits any version. Ignored for mac/macOS.
     required: false
     default: ''
   scheme:

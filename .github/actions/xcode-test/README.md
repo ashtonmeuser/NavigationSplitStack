@@ -54,7 +54,9 @@ For simulators, the newest compatible installed runtime wins. With `os: '27'`,
 restriction. If the newest matching installed runtime has no matching device,
 the action creates one instead of reusing a device on an older runtime. It
 consults the download catalog only when no usable installed runtime matches,
-then selects the newest compatible downloadable match.
+then tries eligible builds in descending OS version order until one provides a
+usable device or type. Downloads are limited to versions no newer than the
+selected platform SDK; this conservative limit does not affect installed runtimes.
 
 Use `device: mac` or `device: macos` (any capitalization) to run on the runner's
 current OS with `-destination platform=macOS`. The action skips all simulator
@@ -85,23 +87,41 @@ For simulator destinations:
    device wins over creation at the same runtime; a newer creatable runtime
    wins over an older existing device. Name, UDID, and runtime identifier
    provide deterministic tie-breaking. No download is needed.
-2. If no suitable installed runtime exists, resolve the version prefix against
+2. If no suitable installed runtime exists, find candidate device types in Xcode
+   and require one recognized platform. Unknown types or ambiguous platforms
+   fail before any catalog request. Read the selected platform SDK version using
+   `xcrun --sdk <platform> --show-sdk-version`, then resolve the OS prefix against
    [Apple's simulator catalog](https://devimages-cdn.apple.com/downloads/xcode/simulators/index2.dvtdownloadableindex).
-   Filter by device platform, device version range, host architecture, and the
-   catalog's Xcode/macOS requirements. Choose the highest version; prefer final
-   releases over prereleases at that version, then the last catalog entry.
-   Download and install that build using `xcodebuild -downloadPlatform
+   Filter by platform, device version range, architecture (including host
+   architecture exclusions), and the catalog's Xcode/macOS requirements.
+   Exclude OS versions newer than the selected platform SDK even when catalog
+   requirements are absent. Order the remaining builds by highest numeric OS
+   version, then final releases ahead of prereleases at that version, then later
+   catalog entries. Duplicate build entries are attempted only once.
+3. Skip already available builds, since installed selection has rejected them.
+   Download and install the next eligible build using `xcodebuild -downloadPlatform
    <platform> -buildVersion <build> -architectureVariant <variant>`.
-3. Query again and reuse or create a device. Run `xcrun simctl bootstatus
+   Query `simctl` again and repeat the same selection procedure. If the build
+   installs successfully but provides no usable match, try the next eligible
+   build. Different models can need different builds of the same OS version;
+   for example, the general iOS 27.2 runtime and the iPhone Duo runtime differ.
+   Stop at the first usable choice, or fail after exhausting eligible builds.
+   A failed download command stops immediately and preserves its exit code.
+4. Reuse or create the selected device. Run `xcrun simctl bootstatus
    <udid> -b` to boot it if needed and wait for startup to complete.
-4. Run `xcodebuild test -scheme <scheme> -destination id=<udid>`, adding
+5. Run `xcodebuild test -scheme <scheme> -destination id=<udid>`, adding
    `-project` only when provided and disabling parallel testing only when
    `disableParallelization` is true.
 
-A UUID pins the existing device and its OS version, even when `os` is omitted.
+A UUID pins the existing device, its runtime identifier, and its build when
+that build is present in the inventory, even when `os` is omitted.
 An unknown UUID or a mismatch with a supplied OS prefix fails.
-If its runtime was removed, the action attempts to reinstall
-that version and reuse the same UUID; it never creates a replacement UUID.
+If its runtime record was removed, the action recovers the version from its
+identifier, including identifiers with model suffixes such as
+`iOS-27-2-iPhone19-4`. It tries builds of that version and requires the original
+runtime identifier and UUID to become available. It never creates a replacement
+UUID or substitutes a different known build. An unavailable device whose runtime
+is already available fails with a diagnostic rather than initiating a download.
 
 The platform is inferred from Xcode's device type metadata: iOS, tvOS, watchOS,
 or visionOS. This action does not configure watch/phone pairing.
@@ -111,9 +131,22 @@ installed runtimes/devices remain on the runner after the action.
 
 Apple's catalog is an external dependency with no guaranteed public schema.
 It is fetched only when a download is necessary. Xcode remains the final
-authority on downloadable builds and compatibility; unavailable downloads,
-unsupported device/runtime combinations, and test failures fail the action.
+authority on downloadable builds and compatibility. Catalog entries can omit
+host requirements and model support, so filtering cannot guarantee that a build
+is usable. The SDK ceiling prevents an older Xcode from selecting an arbitrarily
+newer OS, while the inventory check after installation verifies actual runtime
+availability and device support. To download an OS above that ceiling, select a
+newer Xcode. When no installed match exists, an explicitly requested OS above
+the SDK fails without downloading.
+This may conservatively exclude a runtime that Xcode could otherwise run.
+Trying multiple builds can download and retain multiple runtimes on the runner.
 Installing a runtime cannot add a device type absent from the selected Xcode.
+
+Final releases are preferred only among builds of the same OS version. A newer
+beta can win over an older final release if it is within the selected SDK limit.
+The action resolves simulator compatibility independently of the scheme: the
+scheme's platform, deployment target, and test configuration must support the
+chosen destination. `xcodebuild test` reports any project-specific mismatch.
 
 The installation command follows Apple's
 [Xcode component documentation](https://developer.apple.com/documentation/xcode/downloading-and-installing-additional-xcode-components).
@@ -239,5 +272,8 @@ python3 -m unittest discover -s .github/actions/xcode-test/tests -v
 
 Tests cover selection, unavailable runtimes, exact identifiers, provisioning,
 catalog filtering, signing overrides, parallelization, simulator boot ordering,
-result outputs, and command failures without downloading
-runtimes or changing the simulator inventory.
+result outputs, and command failures without downloading runtimes or changing
+the simulator inventory. Regression fixtures cover multiple builds of the same
+OS, model-specific runtime identifiers, missing catalog bounds, architecture
+exclusions, SDK ceilings, duplicate entries, and download exhaustion. See
+[fixture provenance](tests/fixtures/README.md) and the [flowcharts](flowchard.md).

@@ -163,8 +163,8 @@ class SelectionTests(unittest.TestCase):
 
 class DownloadTests(unittest.TestCase):
     def choose(self, items, **kwargs):
-        return simulators.download_candidate({"downloadables": items}, inventory()["devicetypes"],
-                                         "27", "arm64", "27.1", "27.0", **kwargs)[1]
+        return simulators.download_candidates({"downloadables": items}, inventory()["devicetypes"],
+                                             "27", "arm64", "27.1", "27.0", "27.2", **kwargs)[0]
 
     def test_catalog_prefix_resolution_prefers_latest_version_and_final_release(self):
         final = downloadable("27.2")
@@ -178,7 +178,7 @@ class DownloadTests(unittest.TestCase):
         catalog = {"downloadables": [downloadable("27.0.1", "24A1"), downloadable("27.2"),
                                      downloadable("28.0", hostRequirements={"minXcodeVersion": "28.0"})]}
         with patch.object(simulators, "inventory", side_effect=[before, inventory()]), \
-             patch.object(simulators, "command", side_effect=[plistlib.dumps(catalog), b"Xcode 27.1\n", None]) as cmd, \
+             patch.object(simulators, "command", side_effect=[b"27.2\n", b"Xcode 27.1\n", plistlib.dumps(catalog), None]) as cmd, \
              patch.object(simulators.platform, "machine", return_value="arm64"), \
              patch.object(simulators.platform, "mac_ver", return_value=("27.0", (), "")):
             self.assertEqual(simulators.select("iPhone", "")[1]["version"], "27.2")
@@ -209,6 +209,8 @@ class DownloadTests(unittest.TestCase):
         before["runtimes"] = []
         before["devices"] = {}
         def command(*args, **kwargs):
+            if args == ("xcrun", "--sdk", "iphoneos", "--show-sdk-version"):
+                return b"27.2\n"
             if args[0] == "curl":
                 return plistlib.dumps({"downloadables": [downloadable()]})
             if args == ("xcodebuild", "-version"):
@@ -226,7 +228,7 @@ class DownloadTests(unittest.TestCase):
         before["runtimes"] = []
         catalog = {"downloadables": [downloadable("27.0"), downloadable("27.2")]}
         with patch.object(simulators, "inventory", side_effect=[before, inventory()]), \
-             patch.object(simulators, "command", side_effect=[plistlib.dumps(catalog), b"Xcode 27.1\n", None]) as cmd, \
+             patch.object(simulators, "command", side_effect=[b"27.2\n", b"Xcode 27.1\n", plistlib.dumps(catalog), None]) as cmd, \
              patch.object(simulators.platform, "machine", return_value="arm64"), \
              patch.object(simulators.platform, "mac_ver", return_value=("27.0", (), "")):
             device, selected = simulators.select(UDID, "")
@@ -241,7 +243,7 @@ class DownloadTests(unittest.TestCase):
         before["devices"] = {}
         with patch.object(simulators, "inventory", return_value=before), \
              patch.object(simulators, "command", side_effect=[
-                 plistlib.dumps({"downloadables": [downloadable()]}), b"Xcode 27.1\n",
+                 b"27.2\n", b"Xcode 27.1\n", plistlib.dumps({"downloadables": [downloadable()]}),
                  subprocess.CalledProcessError(70, "xcodebuild")]), \
              patch.object(simulators.platform, "machine", return_value="arm64"), \
              patch.object(simulators.platform, "mac_ver", return_value=("27.0", (), "")):
