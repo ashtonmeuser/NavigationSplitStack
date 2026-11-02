@@ -5,11 +5,126 @@ The optional Swift package cache steps in [action.yml](action.yml) run before
 `run.py` and do not change simulator selection. Any failed external command
 stops the action; these error edges are omitted from the charts for readability.
 
-| Term | Meaning in this action |
+## Concepts and relationships
+
+A simulated device combines a **device type** with a **runtime** and its own
+identity and data. The type describes the model; the runtime supplies the OS;
+the created device is the instance on which tests run. Many devices can share
+one runtime, and the same device type can be used with several compatible OS
+versions. Installing a runtime and creating a device are separate operations.
+See Apple's [explanation of simulator runtimes and devices](https://developer.apple.com/documentation/safari-developer-tools/adding-additional-simulators).
+
+| Entity | Role and identity |
 | --- | --- |
-| Runtime | A simulator OS installation, such as iOS 27.2. It is usable when `simctl` reports `isAvailable: true`. |
-| Device type | A hardware model known to the selected Xcode, such as iPhone 17. Types can exist without installed runtimes or created devices. |
-| Device | A created simulator instance with a UDID, associated with one runtime. It must also report `isAvailable: true` to be reused. |
+| Host Mac | Runs Xcode and CoreSimulator. Its macOS version and architecture constrain which runtimes can run. The host OS is separate from the simulated OS. |
+| Selected Xcode | Provides the build tools and platform SDKs. `DEVELOPER_DIR` or `xcode-select` chooses the installation used by `xcrun` and `xcodebuild`. A runtime does not replace Xcode or add an unknown device type to its inventory. |
+| Platform / product family | The OS family, such as iOS or watchOS, and the device family, such as iPhone or Apple Watch. Several device families can share one platform: iPhone and iPad both map to the iOS simulator platform. |
+| SDK | Platform APIs and build definitions used to compile the app. Its version is distinct from the OS version on which the compiled app runs. This action also uses the selected platform SDK version as a conservative download ceiling. |
+| OS version | A release label such as `27.2`. The `os` input filters these labels by prefix. A version alone does not identify a unique runtime build or establish compatibility. |
+| Runtime / runtime build | The simulator OS package, installed locally from a downloadable artifact. It has a runtime identifier, an OS version, and a build number. Different builds of the same OS version can support different models. |
+| Device type | A model description such as iPhone 17, with a stable type identifier such as `com.apple.CoreSimulator.SimDeviceType.iPhone-17`. It records the product family and supported OS version range. Types can exist without any installed runtimes or created devices. |
+| Device / simulator instance | A created virtual device with a name, a unique UDID, a device type, a runtime association, and its own app/data state. Its display name can change; the UDID identifies the instance. Several instances can have the same model and name. |
+| Scheme / test destination | The scheme specifies what Xcode builds and tests. A destination specifies where to run it: this action uses a simulator UDID or `platform=macOS`. The scheme must support that destination. |
+
+```mermaid
+flowchart LR
+    X["Selected Xcode"] --> SDK["Platform SDK<br/>Build-time APIs"]
+    X --> TYPES["Known device types<br/>Model descriptions"]
+    CATALOG["Apple catalog<br/>Downloadable runtime builds"] --> INSTALL["Download and install"]
+    INSTALL --> RUNTIME["Installed runtime<br/>Platform + OS version + build"]
+    TYPES --> CREATE["Create a compatible device"]
+    RUNTIME --> CREATE
+    CREATE --> DEVICE["Simulator instance<br/>UDID + name + app/data state"]
+    SDK --> TEST["xcodebuild test"]
+    SCHEME["Project and scheme"] --> TEST
+    DEVICE --> TEST
+```
+
+For example, two catalog entries may both say **iOS 27.2**, while one build
+supports general iPhone/iPad models and another supports iPhone Duo. Their
+installed runtime identifiers can also differ, such as `iOS-27-2` versus
+`iOS-27-2-iPhone19-4`. The action therefore retains build and runtime identity
+instead of treating the OS version as a complete identity.
+
+"Simulator" can refer broadly to the simulation tools or to one simulated
+device. Here, selection means choosing a device instance and its runtime.
+CoreSimulator manages these resources; `simctl` is the command-line interface
+used by the action. A graphical simulator window is not required.
+
+## Compatibility has several layers
+
+Matching an input is a selection rule, not proof of compatibility. For example,
+`os: '27'` accepts any version string beginning with `27`, but each candidate
+still needs to pass the relevant checks below.
+
+| Relationship | What determines compatibility | How this action checks it |
+| --- | --- | --- |
+| Host / Xcode / runtime | Host OS, architecture, installed tools, and runtime requirements. | Applies catalog Xcode/macOS bounds and architecture rules when present, then requires `simctl` runtime availability after installation. Missing catalog bounds do not prove support. |
+| SDK / download candidate | The action limits downloads to OS versions no newer than the selected platform SDK. | Reads the SDK version and compares numeric versions. This is a conservative action policy, not a universal Apple rule or a guarantee of compatibility. Already installed runtimes are not subject to this ceiling. |
+| Device type / runtime | The runtime must support the model, and its OS must be within the type's version range. | Before creation, requires the type in the runtime's `supportedDeviceTypes` and checks the type's minimum/maximum OS versions. Catalog filtering knows the version range but may lack model support, so it can require trying multiple builds. |
+| Existing device / runtime | The device and its associated runtime must both be available. | Requires `isAvailable: true` on both. For an exact UDID, also retains the original runtime identifier and any known build. |
+| Device / execution | An available device may still be shut down. Booting and app launch can fail independently. | Runs `simctl bootstatus <udid> -b` and waits before testing. Availability does not mean the device is already booted or guarantee an app will launch successfully. |
+| Project / destination | The scheme's platform, app deployment target, build architecture, and test configuration must support the destination. | Leaves project-specific validation to `xcodebuild test`. The simulator selector does not inspect the scheme; a bootable simulator can still be an invalid destination for that project. |
+
+For example, an app whose minimum OS is 27 cannot run on an OS 26 simulator even
+if that simulator is healthy. A watchOS scheme likewise needs a suitable watchOS
+destination. Apple describes this relationship in
+[selecting a scheme and run destination](https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices).
+
+For `device: mac` or `macos`, tests run natively on the host Mac. There is no
+simulator runtime or simulator UDID, and `os` is ignored. The scheme must still
+support native macOS testing.
+
+## Where the information comes from
+
+The local inventory answers **what this machine knows about and can use**. The
+catalog answers **which runtime builds Apple lists for downloading**. Neither
+alone tells us whether the requested project's tests will run successfully.
+
+### Local machine
+
+The action reads all three simulator collections in one command:
+
+```sh
+xcrun simctl list --json
+```
+
+| JSON collection | Relevant fields and relationships |
+| --- | --- |
+| `devicetypes` | `identifier`, `name`, `productFamily`, `minRuntimeVersionString`, and `maxRuntimeVersionString`. These describe known models independently of created devices. |
+| `runtimes` | `identifier`, `version`, `buildversion`, `isAvailable`, and `supportedDeviceTypes`. The supported type identifiers link back to `devicetypes`. |
+| `devices` | A dictionary keyed by runtime identifier. Each device records its `udid`, `name`, `deviceTypeIdentifier`, and `isAvailable`. Device records may remain after their runtime is removed. |
+
+The action also runs `xcodebuild -version` and
+`xcrun --sdk <platform> --show-sdk-version` when preparing a download. For iOS,
+the SDK argument is `iphoneos`; the other values come from `PLATFORMS`.
+Python's `platform.mac_ver()` and `platform.machine()` supply host version and
+architecture information. `xcrun simctl create` creates a device from a type
+identifier and runtime identifier and returns its UDID.
+
+### Apple's simulator catalog
+
+`CATALOG_URL` points to
+[Apple's downloadable simulator index](https://devimages-cdn.apple.com/downloads/xcode/simulators/index2.dvtdownloadableindex).
+The action fetches it with `curl` and parses the plist using Python's `plistlib`.
+It reads the `downloadables` collection; it does not query Apple for local
+device instances or UDIDs.
+
+| Catalog field | How it is used |
+| --- | --- |
+| `platform` | Filters the OS family, for example `com.apple.platform.iphoneos`. `PLATFORMS` maps the local type's `productFamily` to this suffix and the corresponding `xcodebuild -downloadPlatform` argument. |
+| `simulatorVersion.version` | The OS version used for prefix filtering, numeric ordering, and the SDK ceiling. |
+| `simulatorVersion.buildUpdate` | The exact runtime build passed to `-buildVersion`. Distinct builds at the same OS version remain separate candidates. |
+| `architectures` | Filters the permitted architectures when listed. |
+| `hostRequirements` | Optional minimum/maximum Xcode and macOS versions, plus `excludedHostArchitectures`. The action honors these constraints when present. |
+| `name` | Used in logs and to distinguish final releases from beta/RC entries at the same OS version. |
+
+The catalog can omit compatibility fields and does not reliably identify the
+models supported by each build. The action therefore treats a catalog match as
+an eligible download, installs it using `xcodebuild -downloadPlatform`, and
+queries the local inventory again. It proceeds only when the installed result
+provides a usable matching device or a supported type that can be created.
+The following flowcharts show that process and its failure paths.
 
 ## Overall flow
 
