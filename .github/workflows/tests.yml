@@ -20,27 +20,22 @@ jobs:
         run: swift test
 
   ui-tests:
-    name: UI tests (${{ matrix.name }})
+    name: UI tests
     runs-on: xcode-27
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: iPhone iOS 26.5
+          - device: iPhone 17
             ios_version: '26.5'
-            device: iPhone 17
-          - name: iPhone iOS 27
+          - device: iPhone 17
             ios_version: '27.0'
-            device: iPhone 17
-          - name: iPad iOS 26.5
+          - device: iPad Air 11-inch (M4)
             ios_version: '26.5'
-            device: iPad Air 11-inch (M4)
-          - name: iPad iOS 27
+          - device: iPad Air 11-inch (M4)
             ios_version: '27.0'
-            device: iPad Air 11-inch (M4)
-          - name: macOS 27
-            destination: 'platform=macOS'
+          - device: macOS
     steps:
       - uses: actions/checkout@v7
       - name: Ensure iOS simulator runtime is installed
@@ -66,15 +61,15 @@ jobs:
           simulator_id=$(xcrun simctl create "CI $DEVICE iOS $IOS_VERSION" "$DEVICE" "iOS$IOS_VERSION")
           xcrun simctl boot "$simulator_id"
           xcrun simctl bootstatus "$simulator_id" -b
-          printf 'destination=platform=iOS Simulator,id=%s\n' "$simulator_id" >> "$GITHUB_OUTPUT"
-      - name: Test Minimal on ${{ matrix.name }}
+          printf 'destination=iOS Simulator,id=%s\n' "$simulator_id" >> "$GITHUB_OUTPUT"
+      - name: Minimal UI tests
         env:
-          DESTINATION: ${{ steps.simulator.outputs.destination || matrix.destination }}
+          DESTINATION: ${{ steps.simulator.outputs.destination || matrix.device }}
         run: |
           xcodebuild test \
             -project Examples/Examples.xcodeproj \
             -scheme Minimal \
-            -destination "$DESTINATION" \
+            -destination "platform=$DESTINATION" \
             -parallel-testing-enabled NO \
             -resultBundlePath "$RUNNER_TEMP/Minimal.xcresult" \
             CODE_SIGN_STYLE=Manual \
@@ -84,5 +79,5 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: minimal-ui-tests-${{ matrix.name }}
+          name: Minimal UI Tests ${{ matrix.ios_version && format('{0} iOS {1}', matrix.device, matrix.ios_version) || 'macOS' }}
           path: ${{ runner.temp }}/Minimal.xcresult
