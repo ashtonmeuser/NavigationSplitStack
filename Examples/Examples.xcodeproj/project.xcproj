@@ -13,7 +13,7 @@
   "packages": [
     {
       "kind": "local",
-      "path": "../../NavigationSplitStack",
+      "path": "..",
     }, {
       "kind": "remote",
       "repository": "https://github.com/pointfreeco/sqlite-data",
@@ -65,9 +65,6 @@
       ],
       "package-product-members": [
         {
-          "product-name": "NavigationSplitStack",
-          "build-phase": { "build-phase": "frameworks" },
-        }, {
           "product-name": "NavigationSplitStack",
           "build-phase": { "build-phase": "frameworks" },
         }, {
@@ -131,7 +128,6 @@
       ],
       "package-product-members": [
         {
-          "package": "NavigationSplitStack",
           "product-name": "NavigationSplitStack",
           "build-phase": { "build-phase": "frameworks" },
         },
