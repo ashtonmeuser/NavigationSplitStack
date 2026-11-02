@@ -63,7 +63,9 @@ router.showSidebar()             // Reveal the current sidebar destination.
 router.hideSidebar()             // Focus on detail in a wide layout.
 ```
 
-See the [DocC guide](Sources/NavigationSplitStack/NavigationSplitStack.docc/NavigationSplitStack.md) for more on routing and column presentation.
+## Documentation
+
+See the [full documentation](https://swiftpackageindex.com/ashtonmeuser/NavigationSplitStack/main/documentation/NavigationSplitStack) for more on routing and column presentation.
 Explore the [example apps](Examples/) for working implementations.
 
 ## Caveats
