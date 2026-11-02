@@ -341,7 +341,25 @@ final class MinimalUITests: XCTestCase {
 
 extension XCUIElement {
     @MainActor
-    fileprivate func activate() {
+    fileprivate func activate(
+        scrollingIn container: XCUIElement? = nil,
+        maxSwipes: Int = 5,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let container = container ?? XCUIApplication()
+
+        // List rows may not exist in the accessibility tree until scrolled into view.
+        for _ in 0..<maxSwipes {
+            if exists && isHittable { break }
+            container.swipeUp()
+        }
+
+        guard exists && isHittable else {
+            XCTFail("Could not scroll \(self) into view", file: file, line: line)
+            return
+        }
+
         #if os(macOS)
             click()
         #else
