@@ -1,7 +1,9 @@
 # NavigationSplitStack
 
-[![](https://img.shields.io/badge/documentation-gray?logo=swift&logoColor=white)](https://swiftpackageindex.com/ashtonmeuser/NavigationSplitStack/main/documentation/NavigationSplitStack)
-[![CI](https://github.com/ashtonmeuser/NavigationSplitStack/actions/workflows/tests.yml/badge.svg)](https://github.com/ashtonmeuser/NavigationSplitStack/actions/workflows/tests.yml)
+[![Documentation](https://img.shields.io/badge/Documentation-gray?logo=swift&logoColor=white)](https://swiftpackageindex.com/ashtonmeuser/NavigationSplitStack/main/documentation/NavigationSplitStack)
+[![Unit Tests](https://github.com/ashtonmeuser/NavigationSplitStack/actions/workflows/tests.yml/badge.svg)](https://github.com/ashtonmeuser/NavigationSplitStack/actions/workflows/tests.yml)
+![iOS UI Tests](https://img.shields.io/github/check-runs/ashtonmeuser/NavigationSplitStack/main?nameFilter=Minimal%20%7C%20UI%20Tests%20%7C%20Test%20-%20iOS&logo=apple&label=iOS%20UI%20Tests)
+![macOS UI Tests](https://img.shields.io/github/check-runs/ashtonmeuser/NavigationSplitStack/main?nameFilter=Minimal%20%7C%20UI%20Tests%20%7C%20Test%20-%20macOS&logo=apple&label=macOS%20UI%20Tests)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fashtonmeuser%2FNavigationSplitStack%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/ashtonmeuser/NavigationSplitStack)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fashtonmeuser%2FNavigationSplitStack%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/ashtonmeuser/NavigationSplitStack)
 
