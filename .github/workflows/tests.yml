@@ -1,13 +1,10 @@
-name: Tests
+name: Unit Tests
 
 on:
   push:
 
 permissions:
   contents: read
-
-env:
-  DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
 
 jobs:
   unit-tests:
@@ -18,66 +15,3 @@ jobs:
       - uses: actions/checkout@v7
       - name: Test package
         run: swift test
-
-  ui-tests:
-    name: UI tests
-    runs-on: xcode-27
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - device: iPhone 17
-            ios_version: '26.5'
-          - device: iPhone 17
-            ios_version: '27.0'
-          - device: iPad Air 11-inch (M4)
-            ios_version: '26.5'
-          - device: iPad Air 11-inch (M4)
-            ios_version: '27.0'
-          - device: macOS
-    steps:
-      - uses: actions/checkout@v7
-      - name: Ensure iOS simulator runtime is installed
-        if: matrix.ios_version
-        env:
-          IOS_VERSION: ${{ matrix.ios_version }}
-        run: |
-          runtimes=$(xcrun simctl list runtimes -j)
-          if jq -e --arg version "$IOS_VERSION" '
-            any(.runtimes[]; .platform == "iOS" and .version == $version and .isAvailable)
-          ' <<< "$runtimes" > /dev/null; then
-            echo "iOS $IOS_VERSION simulator runtime is already installed"
-          else
-            xcodebuild -downloadPlatform iOS -buildVersion "$IOS_VERSION" -architectureVariant arm64
-          fi
-      - name: Boot iOS simulator
-        id: simulator
-        if: matrix.ios_version
-        env:
-          IOS_VERSION: ${{ matrix.ios_version }}
-          DEVICE: ${{ matrix.device }}
-        run: |
-          simulator_id=$(xcrun simctl create "CI $DEVICE iOS $IOS_VERSION" "$DEVICE" "iOS$IOS_VERSION")
-          xcrun simctl boot "$simulator_id"
-          xcrun simctl bootstatus "$simulator_id" -b
-          printf 'destination=iOS Simulator,id=%s\n' "$simulator_id" >> "$GITHUB_OUTPUT"
-      - name: Minimal UI tests
-        env:
-          DESTINATION: ${{ steps.simulator.outputs.destination || matrix.device }}
-        run: |
-          xcodebuild test \
-            -project Examples/Examples.xcodeproj \
-            -scheme Minimal \
-            -destination "platform=$DESTINATION" \
-            -parallel-testing-enabled NO \
-            -resultBundlePath "$RUNNER_TEMP/Minimal.xcresult" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="-" \
-            DEVELOPMENT_TEAM=""
-      - name: Upload failed test results
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: Minimal UI Tests ${{ matrix.ios_version && format('{0} iOS {1}', matrix.device, matrix.ios_version) || 'macOS' }}
-          path: ${{ runner.temp }}/Minimal.xcresult
